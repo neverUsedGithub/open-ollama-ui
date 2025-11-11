@@ -53,7 +53,7 @@ export type ModelState = "idle" | "loading" | "typing";
 export type ChatMessageAttachment = { type: "image"; source: Blob };
 
 export type SubChatMessageData =
-  | { kind: "text"; content: string; thinking: boolean }
+  | { kind: "text"; content: string; thinking: boolean; finished: boolean; timeStart: number; timeEnd: number }
   | { kind: "toolcall"; summary: string; toolName: string }
   | { kind: "image-mock"; width: number; height: number }
   | { kind: "error"; title: string; message: unknown }
@@ -65,6 +65,13 @@ export type TextSubChatMessage = {
   content: Accessor<string>;
   stream(chunk: string): void;
   removeToolCall: () => void;
+  finished: boolean;
+
+  timeStart: Accessor<number>;
+  timeEnd: Accessor<number>;
+
+  setTimeStart: Setter<number>;
+  setTimeEnd: Setter<number>;
 };
 
 export type ErrorSubChatMessage = { kind: "error"; title: string; message: unknown };
@@ -79,7 +86,7 @@ export type SubChatMessage =
   | AttachmentSubChatMessage
   | ErrorSubChatMessage;
 
-export interface ModelChatMessage {
+export interface NativeChatMessage {
   role: string;
   content: string;
   hidden?: boolean;

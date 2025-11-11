@@ -52,9 +52,10 @@ export const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
 export const promptTemplates: PromptTemplate[] = [
   {
     top: "Explain computers",
-    bottom: "like I was a cave-man",
+    bottom: "like I was a caveman",
     icon: (<CpuIcon class="-translate-x-1 -rotate-33" />) as Element,
-    insertion: "Explain to me what computers are as if I was a caveman.",
+    insertion:
+      "Explain to me what computers are as if I was a caveman. You should use playful, caveman-speak (simplified english).",
   },
   {
     top: "Give me ideas",
@@ -78,7 +79,7 @@ export const promptTemplates: PromptTemplate[] = [
   {
     top: "I need some ideas",
     bottom: "for a short story",
-    icon: (<LightbulbIcon class="-translate-y-2 -translate-x-1 -rotate-22" />) as Element,
+    icon: (<LightbulbIcon class="-translate-x-1 -translate-y-2 -rotate-22" />) as Element,
     insertion: "I need some ideas for a short story. Give me a few concepts with a little bit of detail.",
   },
   {

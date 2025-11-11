@@ -15,7 +15,7 @@
     display: none;
   }
 
-   >:nth-child(2) {
+  > :nth-child(2) {
     display: block;
   }
 }
