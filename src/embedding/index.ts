@@ -1,5 +1,5 @@
 import { freeOllamaModel } from "@/util/ollama";
-import ollama from "ollama";
+import ollama from "ollama/browser";
 
 // const embeddingModel = "qwen3-embedding:0.6b";
 const embeddingModel = "qwen3-embedding:8b";

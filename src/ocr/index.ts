@@ -1,5 +1,5 @@
 import { freeOllamaModel } from "@/util/ollama";
-import ollama from "ollama";
+import ollama from "ollama/browser";
 
 // const ocrModel = "benhaotang/Nanonets-OCR-s:F16";
 // const ocrModel = "qwen2.5vl:7b";

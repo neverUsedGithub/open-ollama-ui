@@ -10,7 +10,7 @@ import BookOpenText from "lucide-solid/icons/book-open-text";
 import CalculatorIcon from "lucide-solid/icons/calculator";
 import GlobeIcon from "lucide-solid/icons/globe";
 import ImagePlusIcon from "lucide-solid/icons/image-plus";
-import ollama from "ollama";
+import ollama from "ollama/browser";
 import TurndownService from "turndown";
 
 export const modelTools: ModelTool[] = [

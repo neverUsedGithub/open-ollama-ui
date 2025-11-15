@@ -23,7 +23,8 @@ import type {
 } from "@/types";
 import { buildSystemPrompt } from "@/util/prompt";
 import * as vectordb from "@/vectordb";
-import ollama, { type AbortableAsyncIterator, type ChatResponse } from "ollama";
+import type { AbortableAsyncIterator } from "ollama";
+import ollama, {type ChatResponse } from "ollama/browser";
 import { createEffect, createMemo, createSignal, runWithOwner, untrack, type Accessor, type Setter } from "solid-js";
 
 function noop() {}

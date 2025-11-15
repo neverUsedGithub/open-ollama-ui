@@ -1,4 +1,4 @@
-import ollama from "ollama";
+import ollama from "ollama/browser";
 
 export async function freeOllamaModel(model: string): Promise<void> {
   await ollama.generate({

@@ -1,5 +1,5 @@
 import type { LucideProps } from "lucide-solid";
-import type { ShowResponse, ToolCall } from "ollama";
+import type { ShowResponse, ToolCall } from "ollama/browser";
 import type { Accessor, JSX, Setter } from "solid-js";
 import type { VectorDB } from "./vectordb";
 
