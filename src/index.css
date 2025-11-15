@@ -11,12 +11,6 @@ pre {
   font-family: inherit;
 }
 
-test {
-  error: #f57070;
-  error-dimmer: #702f2f;
-  error-overlay: #fc5e5e13;
-}
-
 @theme {
   --color-background: #181818;
   --color-background-default: #252525;

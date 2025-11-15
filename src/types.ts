@@ -46,9 +46,9 @@ export interface UserChatMessage {
   files: UserFile[];
 }
 
-export type ChatMessage = UserChatMessage | AssistantChatMessage;
+export type DisplayChatMessage = UserChatMessage | AssistantChatMessage;
 
-export type ModelState = "idle" | "loading" | "typing";
+export type ModelState = "idle" | "busy" | "loading";
 
 export type ChatMessageAttachment = { type: "image"; source: Blob };
 
@@ -89,7 +89,6 @@ export type SubChatMessage =
 export interface NativeChatMessage {
   role: string;
   content: string;
-  hidden?: boolean;
   thinking?: string;
   tool_name?: string;
   tool_calls?: ToolCall[];
@@ -108,7 +107,7 @@ export interface InputTag {
 }
 
 export interface SupportContext {
-  modelMetaData: ShowResponse;
+  capabilities: ModelCapabilities;
 }
 
 export interface ToolOutput {
@@ -158,4 +157,14 @@ export interface RAGDocument {
   name: string;
   chunks: string[];
   vectors: VectorDB;
+}
+
+export interface ChatData {
+  name: string;
+  id: string;
+}
+
+export interface ModelCapabilities {
+  tools: boolean;
+  thinking: boolean;
 }

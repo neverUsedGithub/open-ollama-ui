@@ -3,6 +3,11 @@ export interface DBQueryResult {
   score: number;
 }
 
+export interface DBSerializedData {
+  keys: number[];
+  vectors: number[][];
+}
+
 export class VectorDB {
   private vectors: Float32Array[] = [];
   private keys: number[] = [];
@@ -26,6 +31,15 @@ export class VectorDB {
     for (let i = 0; i < vector.length; i++) {
       vector[i] = vector[i] / magnitude;
     }
+  }
+
+  serialize(): DBSerializedData {
+    return { keys: Array.from(this.keys), vectors: this.vectors.map((v) => Array.from(v)) };
+  }
+
+  load(data: DBSerializedData) {
+    this.keys = data.keys;
+    this.vectors = data.vectors.map((v) => new Float32Array(v));
   }
 
   add(key: number, vectors: Float32Array[]) {
