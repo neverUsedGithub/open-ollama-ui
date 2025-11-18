@@ -64,6 +64,7 @@ export type TextSubChatMessage = {
   thinking: boolean;
   content: Accessor<string>;
   stream(chunk: string): void;
+  replace(content: string): void;
   removeToolCall: () => void;
 
   finished: Accessor<boolean>;
@@ -108,7 +109,7 @@ export interface InputTag {
 }
 
 export interface SupportContext {
-  capabilities: ModelCapabilities;
+  metadata: ModelMetadata;
 }
 
 export interface ToolOutput {
@@ -161,6 +162,7 @@ export interface RAGDocument {
 }
 
 export interface ChatData {
+  model: string;
   name: string;
   id: string;
 }
@@ -168,4 +170,15 @@ export interface ChatData {
 export interface ModelCapabilities {
   tools: boolean;
   thinking: boolean;
+}
+
+export interface ModelDetails {
+  family?: string;
+  parameterSize?: string;
+  quantizationLevel?: string;
+}
+
+export interface ModelMetadata {
+  capabilities: ModelCapabilities;
+  details: ModelDetails;
 }

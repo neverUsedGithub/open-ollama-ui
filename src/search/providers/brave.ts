@@ -38,11 +38,11 @@ export class BraveSearchProvider extends SearchProvider {
   }
 
   override async search(query: string, options?: SearchOptions): Promise<SearchResult[]> {
-    const searcchParams = new URLSearchParams();
-    searcchParams.set("q", query);
-    if (options?.count) searcchParams.set("count", options.count.toString());
+    const searchParams = new URLSearchParams();
+    searchParams.set("q", query);
+    if (options?.count) searchParams.set("count", options.count.toString());
 
-    const data = (await extensionApi.fetchJSON(`https://api.search.brave.com/res/v1/web/search?${searcchParams}`, {
+    const data = (await extensionApi.fetchJSON(`https://api.search.brave.com/res/v1/web/search?${searchParams}`, {
       headers: {
         Accept: "application/json",
         "Accept-Encoding": "gzip",

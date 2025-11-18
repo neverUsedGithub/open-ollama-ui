@@ -9,6 +9,7 @@ import type {
   DisplayChatMessage,
   InputTag,
   ModelCapabilities,
+  ModelMetadata,
   ModelState,
   ModelTool,
   NativeChatMessage,
@@ -44,8 +45,11 @@ function createSubMessage(data: SubChatMessageData): SubChatMessage {
 
   return {
     kind: "text",
+
     content,
     stream,
+    replace: setContent,
+
     thinking: data.thinking,
 
     removeToolCall: noop,
@@ -128,13 +132,19 @@ export class ChatManagerChat {
   public name: Accessor<string>;
   protected setName: Setter<string>;
 
+  public selectedModel: Accessor<string>;
+  private setSelectedModel: Setter<string>;
+
+  public selectedModelMetadata: Accessor<ModelMetadata | null>;
+  public setSelectedModelMetadadata: Setter<ModelMetadata | null>;
+
   private ollamaResponse: AbortableAsyncIterator<ChatResponse> | null;
 
   public id: string;
   public loaded: boolean;
   public ragDocuments: RAGDocument[];
 
-  constructor(id: string, name: string) {
+  constructor(id: string, name: string, model: string) {
     this.id = id;
     this.loaded = false;
     this.ragDocuments = [];
@@ -143,11 +153,36 @@ export class ChatManagerChat {
 
     [this.name, this.setName] = createSignal(name);
     [this.modelState, this.setModelState] = createSignal<ModelState>("idle");
+    [this.selectedModel, this.setSelectedModel] = createSignal<string>(model);
+    [this.selectedModelMetadata, this.setSelectedModelMetadadata] = createSignal<ModelMetadata | null>(null);
 
     [this.nativeMessages, this.setNativeMessages] = createSignal<NativeChatMessage[]>([]);
     [this.displayMessages, this.setDisplayMessages] = createSignal<DisplayChatMessage[]>([]);
 
     this.autoSave();
+
+    createEffect(() => {
+      const model = this.selectedModel();
+
+      this.setSelectedModelMetadadata(null);
+      this.loadModelMetadata(model);
+    });
+  }
+
+  private async loadModelMetadata(model: string) {
+    const meta = await ollama.show({ model });
+
+    this.setSelectedModelMetadadata({
+      capabilities: {
+        tools: meta.capabilities.includes("tools"),
+        thinking: meta.capabilities.includes("thinking"),
+      },
+      details: {
+        family: meta.details.family,
+        parameterSize: meta.details.parameter_size,
+        quantizationLevel: meta.details.quantization_level,
+      },
+    });
   }
 
   private autoSave() {
@@ -173,7 +208,7 @@ export class ChatManagerChat {
   }
 
   addNativeMessage(message: NativeChatMessage) {
-    this.setNativeMessages([...this.nativeMessages(), message]);
+    this.setNativeMessages((messages) => [...messages, message]);
   }
 
   changeSystemMessage(message: NativeChatMessage) {
@@ -280,15 +315,6 @@ export class ChatManagerChat {
     }
   }
 
-  public async getModelCapabilities(model: string): Promise<ModelCapabilities> {
-    const meta = await ollama.show({ model });
-
-    return {
-      tools: meta.capabilities.includes("tools"),
-      thinking: meta.capabilities.includes("thinking"),
-    };
-  }
-
   public delete() {
     if (this.ollamaResponse) this.ollamaResponse.abort();
     serializeChat.deleteChat(this.id);
@@ -319,8 +345,10 @@ export class ChatManagerChat {
     const assistantMessage = createChatMessage("assistant");
     const userChatMessage = createChatMessage("user", userMessage, fileUploads);
 
-    const capabilities = await this.getModelCapabilities(selectedModel);
+    const metadata = this.selectedModelMetadata();
+    if (!metadata) throw new Error("metadata not loaded");
 
+    const { capabilities } = metadata;
     const promptTools = capabilities.tools ? undefined : tools;
     const modelSystemRole = "system";
 
@@ -333,10 +361,6 @@ export class ChatManagerChat {
 
     this.changeSystemMessage({ role: modelSystemRole, content: buildSystemPrompt({ tools: promptTools }) });
 
-    if (currentTag && currentTag.prompt) {
-      this.addNativeMessage({ role: "user", content: currentTag.prompt });
-    }
-
     await this.processDocumentUploads(fileUploads);
 
     let userImages: string[] = [];
@@ -347,9 +371,17 @@ export class ChatManagerChat {
       }
     }
 
+    let taggedUserMessage = "";
+
+    if (currentTag && currentTag.prompt) {
+      taggedUserMessage += currentTag.prompt + "\n\n";
+    }
+
+    taggedUserMessage += userMessage;
+
     this.addNativeMessage({
       role: "user",
-      content: userMessage,
+      content: taggedUserMessage,
       images: userImages.length > 0 ? userImages : undefined,
     });
 
@@ -357,8 +389,6 @@ export class ChatManagerChat {
 
     this.addDisplayMessage(userChatMessage);
     this.addDisplayMessage(assistantMessage);
-
-    const codeBlockRegex = /((?<!`)`(?!`))(?:.(?!\1))*.?(?<close>\1)?/;
 
     let newTurn = false;
 
@@ -388,6 +418,9 @@ export class ChatManagerChat {
       this.ollamaResponse = await ollama.chat({
         messages: this.nativeMessages(),
         model: selectedModel,
+        options: {
+          num_ctx: 16_000,
+        },
         tools: capabilities.tools
           ? tools.map((tool) => ({
               type: "function",
@@ -406,8 +439,6 @@ export class ChatManagerChat {
       let currentTextSubmessage: TextSubChatMessage | null = null;
 
       try {
-        let lastBlockIndex = 0;
-
         for await (const part of this.ollamaResponse) {
           if (part.message.tool_calls) {
             this.addNativeMessage({
@@ -485,19 +516,10 @@ export class ChatManagerChat {
           }
 
           if (!capabilities.tools) {
-            const codeBlockMatch = textContent.substring(lastBlockIndex).match(codeBlockRegex);
-            const inCodeBlock = codeBlockMatch !== null;
-
-            if (inCodeBlock) {
-              if (codeBlockMatch.groups?.close) {
-                lastBlockIndex = (codeBlockMatch.index ?? 0) + codeBlockMatch[0].length;
-              }
-            } else {
-              if (textContent.includes("<tool>") && !isToolCall) {
-                isToolCall = true;
-                assistantMessage.setState("toolcall");
-                currentTextSubmessage.removeToolCall();
-              }
+            if (textContent.includes("<tool>") && !isToolCall) {
+              isToolCall = true;
+              assistantMessage.setState("toolcall");
+              currentTextSubmessage.removeToolCall();
             }
           }
         }
@@ -508,63 +530,68 @@ export class ChatManagerChat {
         console.error(e);
       }
 
-      if (!capabilities.tools) {
-        if (!errored && isToolCall) {
-          try {
-            assistantMessage.setState("toolcall");
+      if (!capabilities.tools && !errored && isToolCall) {
+        try {
+          assistantMessage.setState("toolcall");
 
-            const toolContent = textContent.substring(
-              textContent.indexOf("<tool>"),
-              textContent.lastIndexOf("</tool>") + "</tool>".length,
-            );
+          const toolStart = textContent.indexOf("<tool>");
+          const toolContent = textContent.substring(toolStart, textContent.lastIndexOf("</tool>") + "</tool>".length);
 
-            const parsed = new DOMParser().parseFromString(toolContent, "text/xml");
-            const toolName = parsed.querySelector("name")?.textContent;
-            const parameters = Array.from(parsed.querySelectorAll("parameter"));
-            const toolParams: Record<string, string> = {};
+          textContent = textContent.substring(0, toolStart);
 
-            if (!toolName) throw new Error("model produced invalid tool call (missing name)");
+          while (textContent[textContent.length - 1] === "\n")
+            textContent = textContent.substring(0, textContent.length - 1);
+          if (textContent.endsWith("```xml")) textContent = textContent.substring(0, textContent.length - 6);
 
-            const summaryText = parsed.querySelector("summary")?.textContent ?? `Executing tool '${toolName}'.`;
+          currentTextSubmessage?.replace(textContent);
+          this.addNativeMessage({ role: "assistant", content: textContent, thinking: thinkingContent });
 
-            assistantMessage.push({ kind: "toolcall", summary: summaryText, toolName });
+          const parsed = new DOMParser().parseFromString(toolContent, "text/xml");
+          const toolName = parsed.querySelector("name")?.textContent;
+          const parameters = Array.from(parsed.querySelectorAll("parameter"));
+          const toolParams: Record<string, string> = {};
 
-            for (const parameter of parameters) {
-              const parameterName = parameter.getAttribute("name");
+          if (!toolName) throw new Error("model produced invalid tool call (missing name)");
 
-              if (!parameterName)
-                throw new Error(`model produced invalid tool call (missing paramater '${parameterName}')`);
-              toolParams[parameterName] = parameter.textContent;
-            }
+          const summaryText = parsed.querySelector("summary")?.textContent ?? `Executing tool '${toolName}'.`;
 
-            const result = await this.runModelTool(
-              selectedModel,
-              assistantMessage,
-              tools,
-              userMessage,
-              toolName,
-              toolParams,
-            );
+          assistantMessage.push({ kind: "toolcall", summary: summaryText, toolName });
 
-            this.addNativeMessage({ role: "assistant", content: `\`\`\`xml\n${toolContent}\n\`\`\`` });
-            this.addNativeMessage({
-              role: "user",
-              content: `The output of tool '${toolName}'. The user cannot see this message.
+          for (const parameter of parameters) {
+            const parameterName = parameter.getAttribute("name");
+
+            if (!parameterName)
+              throw new Error(`model produced invalid tool call (missing paramater '${parameterName}')`);
+            toolParams[parameterName] = parameter.textContent;
+          }
+
+          const result = await this.runModelTool(
+            selectedModel,
+            assistantMessage,
+            tools,
+            userMessage,
+            toolName,
+            toolParams,
+          );
+
+          this.addNativeMessage({ role: "assistant", content: `\`\`\`xml\n${toolContent}\n\`\`\`` });
+          this.addNativeMessage({
+            role: "user",
+            content: `The output of tool '${toolName}'. The user cannot see this message.
 
 \`\`\`json
 ${JSON.stringify(result.data, null, 2)}
 \`\`\``,
-            });
+          });
 
-            newTurn = true;
+          newTurn = true;
 
-            continue;
-          } catch (e) {
-            error = e;
-            errored = true;
-            newTurn = false;
-            console.warn(e);
-          }
+          continue;
+        } catch (e) {
+          error = e;
+          errored = true;
+          newTurn = false;
+          console.warn(e);
         }
       }
 
@@ -586,11 +613,13 @@ ${JSON.stringify(result.data, null, 2)}
     try {
       const loaded = await serializeChat.loadChat(this.id);
 
-      this.setDisplayMessages(loaded.displayMessages);
-      this.setNativeMessages(loaded.nativeMessages);
+      if (loaded.exists) {
+        this.setDisplayMessages(loaded.displayMessages);
+        this.setNativeMessages(loaded.nativeMessages);
+      }
     } catch (error) {
-      console.error(error);
       console.warn(`failed to load chat '${this.name}' (${this.id})`);
+      console.error(error);
     }
 
     this.loaded = true;
@@ -608,8 +637,8 @@ class ChatManagerNewChat extends ChatManagerChat {
 
   public onCreate: (() => void) | null;
 
-  constructor() {
-    super("", "");
+  constructor(model: string) {
+    super("", "", model);
 
     this.created = false;
     this.onCreate = null;
@@ -617,7 +646,7 @@ class ChatManagerNewChat extends ChatManagerChat {
 
   private createNew(userMessage: string) {
     this.id = crypto.randomUUID();
-    this.setName(userMessage.substring(0, 20));
+    this.setName(userMessage.substring(0, 40));
 
     this.onCreate?.();
     this.created = true;
@@ -644,9 +673,13 @@ export class ChatManager {
 
   public currentChat: Accessor<ChatManagerChat>;
 
-  private static instance: ChatManager = new ChatManager();
+  private defaultModel: string;
 
-  private constructor() {
+  private static instance: ChatManager | null = null;
+
+  private constructor(defaultModel: string) {
+    this.defaultModel = defaultModel;
+
     [this.chats, this.setChats] = createSignal<ChatManagerChat[]>([]);
     [this.chatId, this.setChatId] = createSignal<string | null>(null);
 
@@ -659,8 +692,9 @@ export class ChatManager {
     this.autoSave();
   }
 
-  public static getInstance(): ChatManager {
-    return ChatManager.instance;
+  public static getInstance(defaultModel: string): ChatManager {
+    if (this.instance === null) this.instance = new ChatManager(defaultModel);
+    return this.instance;
   }
 
   private loadChats() {
@@ -669,7 +703,7 @@ export class ChatManager {
       const loaded: ChatManagerChat[] = [];
 
       for (const chat of chats) {
-        loaded.push(runWithOwner(null, () => new ChatManagerChat(chat.id, chat.name))!);
+        loaded.push(runWithOwner(null, () => new ChatManagerChat(chat.id, chat.name, chat.model))!);
       }
 
       this.setChats(loaded);
@@ -695,7 +729,7 @@ export class ChatManager {
 
     for (const chat of chats) {
       chat.saveChat();
-      chatData.push({ name: chat.name(), id: chat.id });
+      chatData.push({ name: chat.name(), id: chat.id, model: chat.selectedModel() });
     }
 
     serializeChatList.saveChats(chatData);
@@ -735,7 +769,7 @@ export class ChatManager {
     const found = this.chats().find((chat) => chat.id === id);
 
     if (id === null || found === undefined) {
-      const temporary = runWithOwner(null, () => new ChatManagerNewChat())!;
+      const temporary = runWithOwner(null, () => new ChatManagerNewChat(this.defaultModel))!;
 
       temporary.onCreate = () => {
         this.addChat(temporary);

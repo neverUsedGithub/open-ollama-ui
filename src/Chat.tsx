@@ -300,7 +300,7 @@ function SubMessageView(props: { subMessage: SubChatMessage; messageState: ChatM
     if (messageContainer.children.length > 0) {
       const lastChild = messageContainer.children[messageContainer.children.length - 1];
 
-      if (lastChild.tagName === "PRE" && lastChild.children.length === 1 && lastChild.children[0].tagName === "CODE") {
+      if (lastChild.tagName === "PRE" && lastChild.children[0].tagName === "CODE") {
         lastChild.remove();
         removedToolBlock = true;
       } else if (lastChild.tagName === "P") {
@@ -387,7 +387,6 @@ function InputTagButton(props: { tag: string; toggleTag: (tag: string) => void }
 
 export interface ChatViewProps {
   chat: ChatManagerChat;
-  selectedModel: string;
 }
 
 export function ChatView(props: ChatViewProps) {
@@ -419,12 +418,10 @@ export function ChatView(props: ChatViewProps) {
   let messagesContainer!: HTMLDivElement;
 
   createEffect(async () => {
-    const metadata = await props.chat.getModelCapabilities(props.selectedModel);
+    const metadata = props.chat.selectedModelMetadata();
     if (!metadata) return;
 
-    const supportContext: SupportContext = {
-      capabilities: metadata,
-    };
+    const supportContext: SupportContext = { metadata };
 
     for (const tag of inputTags) {
       if (!tag.isSupported) {
@@ -462,7 +459,7 @@ export function ChatView(props: ChatViewProps) {
 
     if (ev.deltaY > 0) {
       const dist = Math.abs(messagesContainer.scrollHeight - (parentEl.scrollTop + parentEl.offsetHeight));
-      shouldScrollToBottom = dist < 100;
+      shouldScrollToBottom = dist < 200;
     } else {
       shouldScrollToBottom = false;
     }
@@ -501,7 +498,7 @@ export function ChatView(props: ChatViewProps) {
   async function sendMessage(text: string) {
     const toolChecks = toolSupport();
     const result = props.chat.sendMessage(
-      props.selectedModel,
+      props.chat.selectedModel(),
 
       text,
       userFileUploads(),
@@ -595,12 +592,12 @@ export function ChatView(props: ChatViewProps) {
   const chatHistoryEmpty = createMemo(() => props.chat.nativeMessages().length === 0);
 
   return (
-    <div class="flex h-screen flex-1 p-8">
+    <div class="flex h-full max-h-full p-8">
       <div class="flex w-8/12 flex-1 flex-col gap-8">
         <Show when={chatHistoryEmpty()}>
           <div class="flex h-1/2 items-end justify-center gap-4">
             <img src="open-llm-ui.svg" alt="" class="size-12" />
-            <h2 class="font-handwriting -translate-y-1 text-4xl">{props.selectedModel}</h2>
+            <h2 class="font-handwriting -translate-y-1 text-4xl">{props.chat.selectedModel()}</h2>
           </div>
         </Show>
 

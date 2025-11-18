@@ -13,7 +13,7 @@ function ChatItem(props: { children: JSX.Element; onClick: () => void; class?: s
   let chatItemElement!: HTMLButtonElement;
 
   function chatItemClick(ev: Event) {
-    if (ev.target === chatItemElement) {
+    if (ev.target === chatItemElement || Array.from(chatItemElement.childNodes).includes(ev.target! as ChildNode)) {
       props.onClick();
     }
   }
@@ -30,7 +30,10 @@ function ChatItem(props: { children: JSX.Element; onClick: () => void; class?: s
 }
 
 export default function App() {
-  const chatManager = ChatManager.getInstance();
+  // const chatManager = ChatManager.getInstance("gemma3:12b");
+  // const chatManager = ChatManager.getInstance("granite4:32b-a9b-h");
+  // const chatManager = ChatManager.getInstance("qwen3:14b");
+  const chatManager = ChatManager.getInstance("qwen3:30b-a3b-instruct-2507-q4_K_M");
 
   return (
     <div class="flex">
@@ -48,7 +51,7 @@ export default function App() {
                 class="justify-between not-hover:[&>:nth-child(2)>:nth-child(1)]:opacity-0"
                 onClick={() => chatManager.setOpenChat(chat.id)}
               >
-                <span>{chat.name()}</span>
+                <span class="line-clamp-1 text-left">{chat.name()}</span>
                 <Dropdown>
                   <Dropdown.Trigger>
                     <button class="cursor-pointer">
@@ -67,7 +70,14 @@ export default function App() {
           </For>
         </div>
       </div>
-      <ChatView chat={chatManager.currentChat()} selectedModel="qwen3:30b-a3b-instruct-2507-q4_K_M" />
+      <div class="flex h-screen max-h-screen flex-1 flex-col">
+        <div class="border-background-default flex border-b px-4 py-2 text-sm">
+          {chatManager.currentChat().selectedModel()}
+        </div>
+        <div class="flex-1 overflow-y-auto">
+          <ChatView chat={chatManager.currentChat()} />
+        </div>
+      </div>
     </div>
   );
 }

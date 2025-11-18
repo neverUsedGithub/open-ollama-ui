@@ -77,60 +77,56 @@ Finally, rewrite the refined prompt as one to multiple clear sentences that soun
       };
     },
   },
-  {
-    name: "code_interpreter",
-    icon: BinaryIcon,
-    summary: "Executing a piece of code.",
-    description: `Executes a python code snippet. No otther programming languages are supported.
+  // {
+  //   name: "code_interpreter",
+  //   icon: BinaryIcon,
+  //   summary: "Executing a piece of code.",
+  //   description: `Executes a Python code snippet in a hidden, non-visible, internal runtime environment. Only Python is supported (version 3.10). The execution environment may not have internet access, and its file system is non-persistent — all files are cleared between calls. Code executed with this tool is never shown to the user, so do not use it to run code the user asked you to provide unless they explicitly request execution or testing. Only call this tool when it is genuinely required to answer the user’s request or when it is a necessary step in your internal reasoning; do not call it unnecessarily or speculatively.`,
+  //   parameters: {
+  //     type: "object",
+  //     properties: {
+  //       code: {
+  //         type: "string",
+  //         description: "The code snippet to execute.",
+  //       },
+  //     },
 
-The currently supported python version is 3.10. The container running the python program is NOT guaranteed to have internet connectivity. The file system of the python environment is NOT persistent, it will reset between code_interpreter calls.
+  //     required: ["code"],
+  //   },
 
-Code snippets you execute are NOT visible to the user, and you should NOT use this tool to execute code the user has asked you to produce, unless the user explicitly asks you to test running the program.`,
-    parameters: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "The code snippet to execute.",
-        },
-      },
+  //   mockOutput: [],
 
-      required: ["code"],
-    },
+  //   async execute(properties: { code: string }) {
+  //     const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         language: "python",
+  //         version: "3.10",
+  //         files: [
+  //           {
+  //             name: "main.py",
+  //             content: properties.code,
+  //           },
+  //         ],
+  //         stdin: "",
+  //         args: [],
+  //       }),
+  //     });
 
-    mockOutput: [],
+  //     const data = await res.json();
 
-    async execute(properties: { code: string }) {
-      const res = await fetch("https://emkc.org/api/v2/piston/execute", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          language: "python",
-          version: "3.10",
-          files: [
-            {
-              name: "main.py",
-              content: properties.code,
-            },
-          ],
-          stdin: "",
-          args: [],
-        }),
-      });
+  //     if (!res.ok) {
+  //       throw new Error("code execution failed");
+  //     }
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error("code execution failed");
-      }
-
-      return {
-        data: { code: data.run.code, output: data.run.output },
-      };
-    },
-  },
+  //     return {
+  //       data: { code: data.run.code, output: data.run.output },
+  //     };
+  //   },
+  // },
   {
     name: "web_search",
     icon: GlobeIcon,
@@ -230,12 +226,12 @@ Code snippets you execute are NOT visible to the user, and you should NOT use th
 
         const output = turndown.turndown(contentEl);
 
-        const summaryModel = "gemma3:4b";
+        const summaryModel = "qwen3:4b-instruct-2507-fp16";
         const summarized = await ollama.chat({
           model: summaryModel,
           stream: false,
           options: {
-            num_ctx: 64000,
+            num_ctx: 16_000,
           },
           messages: [
             {
@@ -346,7 +342,7 @@ Output only the extracted information.`,
       const response = await ollama.chat({
         model: "gemma3:4b",
         options: {
-          num_ctx: 64000,
+          num_ctx: 16_000,
         },
         messages: [
           {

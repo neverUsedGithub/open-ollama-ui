@@ -18,11 +18,17 @@ type SavedRAGDocument = ExcludeKeys<RAGDocument, "vectors"> & {
   vectors: DBSerializedData;
 };
 
-export async function loadChat(
-  chatId: string,
-): Promise<{ nativeMessages: NativeChatMessage[]; displayMessages: DisplayChatMessage[]; documents: RAGDocument[] }> {
+export async function loadChat(chatId: string): Promise<
+  | { exists: false }
+  | {
+      exists: true;
+      nativeMessages: NativeChatMessage[];
+      displayMessages: DisplayChatMessage[];
+      documents: RAGDocument[];
+    }
+> {
   const chatData = localStorage.getItem(`llm-ui-chat-${chatId}`);
-  if (!chatData) return { nativeMessages: [], displayMessages: [], documents: [] };
+  if (!chatData) return { exists: false };
 
   const parsed: {
     stringPool: string[];
@@ -35,7 +41,7 @@ export async function loadChat(
   const messages: DisplayChatMessage[] = [];
   const nativeMessages: NativeChatMessage[] = [];
 
-  if (!("messages" in parsed) || !("data" in parsed)) return { nativeMessages: [], displayMessages: [], documents: [] };
+  if (!("messages" in parsed) || !("data" in parsed)) throw new Error("malformed data");
 
   for (const message of parsed.data) {
     const nativeMessage: NativeChatMessage = message as unknown as NativeChatMessage;
@@ -78,7 +84,7 @@ export async function loadChat(
     });
   }
 
-  return { nativeMessages: nativeMessages, displayMessages: messages, documents };
+  return { exists: true, nativeMessages: nativeMessages, displayMessages: messages, documents };
 }
 
 export function saveChat(
