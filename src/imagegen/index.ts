@@ -1,17 +1,37 @@
 import { comfyGenerateImage } from "./comfyui";
+
 import fluxDevWorkflow from "./workflows/flux-dev.json";
+import qwenImageWorkflow from "./workflows/qwen_image.json";
+
+function readyWorkflow(type: "flux-dev" | "qwen-image", prompt: string, width: number, height: number): unknown {
+  if (type === "flux-dev") {
+    const workflow = structuredClone(fluxDevWorkflow);
+
+    workflow[27].inputs.width = width;
+    workflow[27].inputs.height = height;
+
+    workflow[30].inputs.width = width;
+    workflow[30].inputs.height = height;
+
+    workflow[39].inputs.text = prompt;
+
+    return workflow;
+  }
+
+  const workflow = structuredClone(qwenImageWorkflow);
+
+  workflow["75:58"].inputs.width = width;
+  workflow["75:58"].inputs.height = height;
+
+  workflow["75:3"].inputs.seed = Math.floor(Math.random() * 1_000_000_000_000_000);
+
+  workflow["75:6"].inputs.text = prompt;
+
+  return workflow;
+}
 
 export async function generateImage(prompt: string): Promise<Blob> {
-  const workflow = structuredClone(fluxDevWorkflow);
-
-  workflow[27].inputs.width = 512;
-  workflow[27].inputs.height = 512;
-
-  workflow[30].inputs.width = 512;
-  workflow[30].inputs.height = 512;
-
-  workflow[39].inputs.text = prompt;
-
+  const workflow = readyWorkflow("qwen-image", prompt, 512, 512);
   const image = await comfyGenerateImage(workflow, "http://localhost:8000");
 
   // Free up vram for ollama.

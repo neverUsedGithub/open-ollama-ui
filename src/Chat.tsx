@@ -597,7 +597,7 @@ export function ChatView(props: ChatViewProps) {
         <Show when={chatHistoryEmpty()}>
           <div class="flex h-1/2 items-end justify-center gap-4">
             <img src="open-llm-ui.svg" alt="" class="size-12" />
-            <h2 class="font-handwriting -translate-y-1 text-4xl">{props.chat.selectedModel()}</h2>
+            <h2 class="font-handwriting -translate-y-1 text-4xl max-w-72 line-clamp-1">{props.chat.selectedModel()}</h2>
           </div>
         </Show>
 
