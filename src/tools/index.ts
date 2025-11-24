@@ -103,32 +103,6 @@ Refinement Process:
       };
     },
   },
-  {
-    name: "random_image",
-    icon: BinaryIcon,
-    summary: "Finding a random image.",
-    description: "Finds and returns a random image.",
-    parameters: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-
-    mockOutput: [
-      {
-        kind: "image",
-        width: 300,
-        height: 300,
-      },
-    ],
-
-    async execute(properties, context) {
-      return {
-        data: { success: true, message: "The image has been found, and is now shown to the user." },
-        images: [await fetch("https://picsum.photos/300/300").then((r) => r.blob())],
-      };
-    },
-  },
   // {
   //   name: "code_interpreter",
   //   icon: BinaryIcon,
