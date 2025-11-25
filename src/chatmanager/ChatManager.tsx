@@ -21,6 +21,7 @@ import type {
   ToolOutput,
   UserChatMessage,
   UserFile,
+  UserPreferences,
 } from "@/types";
 import { buildSystemPrompt } from "@/util/prompt";
 import * as vectordb from "@/vectordb";
@@ -654,11 +655,17 @@ class ChatManagerNewChat extends ChatManagerChat {
 
   public onCreate: (() => void) | null;
 
-  constructor(model: string) {
+  constructor(model: string, setDefaultModel: (model: string) => void) {
     super("", "", model);
 
     this.created = false;
     this.onCreate = null;
+
+    createEffect(() => {
+      if (!this.created) {
+        setDefaultModel(this.selectedModel());
+      }
+    });
   }
 
   private createNew(userMessage: string) {
@@ -693,12 +700,14 @@ export class ChatManager {
 
   public currentChat: Accessor<ChatManagerChat>;
 
-  private defaultModel: string;
+  private preferences: Accessor<UserPreferences>;
+  private setPreferences: Setter<UserPreferences>;
 
   private static instance: ChatManager | null = null;
 
-  private constructor(defaultModel: string) {
-    this.defaultModel = defaultModel;
+  private constructor(preferences: Accessor<UserPreferences>, setPreferences: Setter<UserPreferences>) {
+    this.preferences = preferences;
+    this.setPreferences = setPreferences;
 
     [this.chats, this.setChats] = createSignal<ChatManagerChat[]>([]);
     [this.chatId, this.setChatId] = createSignal<string | null>(null);
@@ -714,8 +723,11 @@ export class ChatManager {
     this.loadModels();
   }
 
-  public static getInstance(defaultModel: string): ChatManager {
-    if (this.instance === null) this.instance = new ChatManager(defaultModel);
+  public static getInstance(
+    preferences: Accessor<UserPreferences>,
+    setPreferences: Setter<UserPreferences>,
+  ): ChatManager {
+    if (this.instance === null) this.instance = new ChatManager(preferences, setPreferences);
     return this.instance;
   }
 
@@ -796,7 +808,13 @@ export class ChatManager {
     const found = this.chats().find((chat) => chat.id === id);
 
     if (id === null || found === undefined) {
-      const temporary = runWithOwner(null, () => new ChatManagerNewChat(this.defaultModel))!;
+      const temporary = runWithOwner(
+        null,
+        () =>
+          new ChatManagerNewChat(this.preferences().defaultModel, (newModel) =>
+            this.setPreferences((current) => ({ ...current, defaultModel: newModel })),
+          ),
+      )!;
 
       temporary.onCreate = () => {
         this.addChat(temporary);

@@ -184,7 +184,7 @@ Combobox.Separator = function ComboboxSeparator() {
 
 Combobox.Empty = function ComboboxEmpty(props: { children: JSX.Element; class?: string }) {
   return (
-    <div class={cn("hidden nth-[3]:flex text-foreground-muted py-2 items-center justify-center gap-2", props.class)}>
+    <div class={cn("text-foreground-muted hidden items-center justify-center gap-2 py-2 nth-[3]:flex", props.class)}>
       <SearchXIcon class="size-4 translate-y-0.25" />
       {props.children}
     </div>

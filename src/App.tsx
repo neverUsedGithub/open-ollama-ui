@@ -1,8 +1,10 @@
-import { For, Show, type JSX } from "solid-js";
+import { createEffect, createSignal, For, Show, type JSX, type Setter } from "solid-js";
 import { ChatView } from "./Chat";
 
+import ChevronRightIcon from "lucide-solid/icons/chevron-right";
 import ChevronDownIcon from "lucide-solid/icons/chevron-down";
-import NotebookPen from "lucide-solid/icons/notebook-pen";
+import SquarePenIcon from "lucide-solid/icons/square-pen";
+import PanelLeftIcon from "lucide-solid/icons/panel-left";
 import EllipsisIcon from "lucide-solid/icons/ellipsis";
 import TrashIcon from "lucide-solid/icons/trash-2";
 
@@ -11,6 +13,8 @@ import { Dropdown } from "./components/Dropdown";
 import { cn } from "./util/cn";
 import { Combobox } from "./components/Combobox";
 import { Button } from "./components/Button";
+import { loadPreferences, savePreferences } from "./serialization/preferences";
+import type { UserPreferences } from "./types";
 
 function ChatItem(props: { children: JSX.Element; onClick: () => void; class?: string }) {
   let chatItemElement!: HTMLButtonElement;
@@ -22,59 +26,133 @@ function ChatItem(props: { children: JSX.Element; onClick: () => void; class?: s
   }
 
   return (
-    <button
-      class={cn("flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-zinc-800", props.class)}
+    <Button
+      class={cn("pl-2 py-1.5 text-sm hover:bg-zinc-800", props.class)}
+      variant="ghost"
       onClick={chatItemClick}
       ref={chatItemElement}
     >
       {props.children}
-    </button>
+    </Button>
+  );
+}
+
+function SidebarExpanded(props: {
+  chatManager: ChatManager;
+  preferences: UserPreferences;
+  setPreferences: Setter<UserPreferences>;
+}) {
+  return (
+    <div class="border-background-higher flex w-[255px] flex-col gap-4 border-r p-2">
+      <div class="flex justify-between">
+        <Button variant="ghost" icon={true} onClick={() => props.chatManager.createNewChat()}>
+          <img src="open-llm-ui.svg" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          icon={true}
+          onClick={() => props.setPreferences((current) => ({ ...current, sidebarExpanded: false }))}
+        >
+          <PanelLeftIcon />
+        </Button>
+      </div>
+      <div class="flex flex-col gap-2">
+        <ChatItem onClick={() => props.chatManager.createNewChat()}>
+          <SquarePenIcon class="size-4" />
+          New chat
+        </ChatItem>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button
+          class="text-foreground-muted ml-2 flex cursor-pointer items-center gap-1 text-sm"
+          onClick={() => props.setPreferences((current) => ({ ...current, chatsExpanded: !current.chatsExpanded }))}
+        >
+          Your chats
+          <Show when={props.preferences.chatsExpanded}>
+            <ChevronDownIcon class="size-4" />
+          </Show>
+          <Show when={!props.preferences.chatsExpanded}>
+            <ChevronRightIcon class="size-4" />
+          </Show>
+        </button>
+        <Show when={props.preferences.chatsExpanded}>
+          <div class="flex flex-col">
+            <For each={props.chatManager.chats()}>
+              {(chat) => (
+                <ChatItem
+                  class="justify-between not-hover:[&>:nth-child(2)>:nth-child(1)]:opacity-0"
+                  onClick={() => props.chatManager.setOpenChat(chat.id)}
+                >
+                  <span class="line-clamp-1 text-left">{chat.name()}</span>
+                  <Dropdown>
+                    <Dropdown.Trigger>
+                      <button class="cursor-pointer">
+                        <EllipsisIcon class="size-4" />
+                      </button>
+                    </Dropdown.Trigger>
+                    <Dropdown.Content>
+                      <Dropdown.Item variant="destructive" onSelect={() => props.chatManager.deleteChat(chat.id)}>
+                        <TrashIcon class="size-4" />
+                        Delete
+                      </Dropdown.Item>
+                    </Dropdown.Content>
+                  </Dropdown>
+                </ChatItem>
+              )}
+            </For>
+          </div>
+        </Show>
+      </div>
+    </div>
+  );
+}
+
+function SidebarCollapsed(props: {
+  chatManager: ChatManager;
+  preferences: UserPreferences;
+  setPreferences: Setter<UserPreferences>;
+}) {
+  return (
+    <div class="flex flex-col gap-4 py-2 px-2">
+      <div class="flex flex-col gap-2">
+        <Button
+          variant="ghost"
+          icon={true}
+          onClick={() => props.setPreferences((current) => ({ ...current, sidebarExpanded: true }))}
+          class="hover:[&>:nth-child(1)]:hidden hover:[&>:nth-child(2)]:block"
+        >
+          <img src="open-llm-ui.svg" />
+          <PanelLeftIcon class="hidden" />
+        </Button>
+      </div>
+      <div class="flex flex-col gap-2">
+        <Button variant="ghost" onClick={() => props.chatManager.createNewChat()} class="size-8 rounded-full px-2">
+          <SquarePenIcon class="h-full w-full" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
 export default function App() {
-  // const chatManager = ChatManager.getInstance("gemma3:12b");
-  // const chatManager = ChatManager.getInstance("granite4:32b-a9b-h");
-  // const chatManager = ChatManager.getInstance("qwen3:14b");
-  const chatManager = ChatManager.getInstance("qwen3:30b-a3b-instruct-2507-q4_K_M");
+  const [preferences, setPreferences] = createSignal(loadPreferences());
+  const chatManager = ChatManager.getInstance(preferences, setPreferences);
+
+  createEffect(() => savePreferences(preferences()));
 
   return (
     <div class="flex">
-      <div class="flex w-[255px] flex-col gap-2 border-r border-zinc-800 p-2">
-        <div class="flex flex-col">
-          <ChatItem onClick={() => chatManager.createNewChat()}>
-            <NotebookPen size={18} />
-            New chat
-          </ChatItem>
-        </div>
-        <div class="flex flex-col">
-          <For each={chatManager.chats()}>
-            {(chat) => (
-              <ChatItem
-                class="justify-between not-hover:[&>:nth-child(2)>:nth-child(1)]:opacity-0"
-                onClick={() => chatManager.setOpenChat(chat.id)}
-              >
-                <span class="line-clamp-1 text-left">{chat.name()}</span>
-                <Dropdown>
-                  <Dropdown.Trigger>
-                    <button class="cursor-pointer">
-                      <EllipsisIcon class="size-4" />
-                    </button>
-                  </Dropdown.Trigger>
-                  <Dropdown.Content>
-                    <Dropdown.Item variant="destructive" onSelect={() => chatManager.deleteChat(chat.id)}>
-                      <TrashIcon class="size-4" />
-                      Delete
-                    </Dropdown.Item>
-                  </Dropdown.Content>
-                </Dropdown>
-              </ChatItem>
-            )}
-          </For>
-        </div>
-      </div>
+      <Show when={preferences().sidebarExpanded}>
+        <SidebarExpanded chatManager={chatManager} preferences={preferences()} setPreferences={setPreferences} />
+      </Show>
+
+      <Show when={!preferences().sidebarExpanded}>
+        <SidebarCollapsed chatManager={chatManager} preferences={preferences()} setPreferences={setPreferences} />
+      </Show>
+
       <div class="flex h-screen max-h-screen flex-1 flex-col">
-        <div class="flex justify-between gap-2 px-3.5 py-2 text-sm h-12">
+        <div class="flex h-12 justify-between gap-2 px-3.5 py-2 text-sm">
           <Combobox>
             <Combobox.Trigger>
               <Button variant="ghost">

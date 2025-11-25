@@ -4,7 +4,7 @@ import PartyPopperIcon from "lucide-solid/icons/party-popper";
 import LightbulbIcon from "lucide-solid/icons/lightbulb";
 import MailIcon from "lucide-solid/icons/mail";
 import CpuIcon from "lucide-solid/icons/cpu";
-import type { PromptTemplate } from "@/types";
+import type { PromptTemplate, UserPreferences } from "@/types";
 
 export const baseSystemPrompt = `You are a helpful assistant. You are currently running in the Open LLM UI web application.
 
@@ -89,3 +89,9 @@ export const promptTemplates: PromptTemplate[] = [
     insertion: "Write a polite email asking to reschedule a meeting to next week.",
   },
 ];
+
+export const basePreferences: UserPreferences = {
+  chatsExpanded: true,
+  sidebarExpanded: true,
+  defaultModel: "gpt-oss:20b",
+};

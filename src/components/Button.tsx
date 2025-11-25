@@ -21,7 +21,7 @@ export function Button(props: ButtonProps) {
       {...props}
       class={cn(
         "flex items-center gap-2 rounded-lg px-3 py-1 not-disabled:cursor-pointer",
-        props.icon && "size-9 rounded-full p-2 [&>*]:h-full [&>*]:w-full",
+        props.icon && "size-8 rounded-full p-2 [&>*]:h-full [&>*]:w-full",
         buttonVariants[props.variant ?? "default"],
         "disabled:text-foreground-muted disabled:bg-transparent",
         props.class,

@@ -184,3 +184,9 @@ export interface ModelMetadata {
   capabilities: ModelCapabilities;
   details: ModelDetails;
 }
+
+export interface UserPreferences {
+  defaultModel: string;
+  chatsExpanded: boolean;
+  sidebarExpanded: boolean;
+}

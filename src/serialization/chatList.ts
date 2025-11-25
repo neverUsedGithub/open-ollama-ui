@@ -2,7 +2,13 @@ import type { ChatData } from "@/types";
 
 export function loadChats(): ChatData[] {
   const chats = localStorage.getItem("llm-ui-chats");
-  return chats ? JSON.parse(chats) : [];
+  if (chats === null) return [];
+
+  try {
+    return JSON.parse(chats);
+  } catch {
+    return [];
+  }
 }
 
 export function saveChats(chats: ChatData[]): void {

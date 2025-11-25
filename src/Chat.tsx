@@ -99,13 +99,13 @@ function SendButton(props: {
   return (
     <>
       <Show when={props.modelState === "idle"}>
-        <Button icon={true} variant="primary" disabled={!props.allowMessage} onClick={props.sendMessage}>
+        <Button icon={true} variant="primary" class="size-9" disabled={!props.allowMessage} onClick={props.sendMessage}>
           <ArrowUpIcon />
         </Button>
       </Show>
 
       <Show when={props.modelState !== "idle"}>
-        <Button icon={true} class="hover:bg-background-higher p-3" onClick={props.stopMessage}>
+        <Button icon={true} class="hover:bg-background-higher size-9 p-3" onClick={props.stopMessage}>
           <SquareIcon class="text-foreground-muted" />
         </Button>
       </Show>
