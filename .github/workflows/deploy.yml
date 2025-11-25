@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: pnpm i
       - name: Build
-        run: pnpm run build --base /open-llm-ui/
+        run: pnpm run build --base /open-ollama-ui/
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

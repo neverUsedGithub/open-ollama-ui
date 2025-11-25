@@ -106,7 +106,7 @@ function SendButton(props: {
 
       <Show when={props.modelState !== "idle"}>
         <Button icon={true} class="hover:bg-background-higher size-9 p-3" onClick={props.stopMessage}>
-          <SquareIcon class="text-foreground-muted" />
+          <SquareIcon class="text-foreground-muted" stroke-width={4} />
         </Button>
       </Show>
     </>

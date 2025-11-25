@@ -3,7 +3,7 @@
     "tailwindcss-language-server": {
       "settings": {
         "experimental": {
-          "classRegex": [".*Variants\\:[^=]*?\\=\\s\\{([^\\}]*)"]
+          "classRegex": ["/\\*\\s*tailwind\\s*\\*/\\s*\"([^\"]*)"]
         }
       }
     }

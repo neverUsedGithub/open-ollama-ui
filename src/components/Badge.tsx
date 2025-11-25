@@ -4,10 +4,10 @@ import type { JSXElement } from "solid-js";
 export type BadgeVariant = "default" | "destructive" | "warn" | "info";
 
 const badgeVariants: Record<BadgeVariant, string> = {
-  default: "outline-background-higher bg-background-default",
-  destructive: "outline-red-800 bg-yellow-800/25 text-red-100",
-  warn: "outline-yellow-800 bg-yellow-800/25 text-yellow-100",
-  info: "outline-blue-800 bg-blue-800/25 text-blue-100",
+  default: /* tailwind */ "outline-background-higher bg-background-default",
+  destructive: /* tailwind */ "outline-red-800 bg-yellow-800/25 text-red-100",
+  warn: /* tailwind */ "outline-yellow-800 bg-yellow-800/25 text-yellow-100",
+  info: /* tailwind */ "outline-blue-800 bg-blue-800/25 text-blue-100",
 };
 
 export function Badge(props: { variant?: BadgeVariant; class?: string; children?: JSXElement }) {

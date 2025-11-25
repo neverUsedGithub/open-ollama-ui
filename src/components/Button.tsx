@@ -4,10 +4,10 @@ import type { ComponentProps } from "solid-js";
 export type ButtonVariant = "default" | "outline" | "ghost" | "primary";
 
 const buttonVariants: Record<ButtonVariant, string> = {
-  default: "bg-background-default hover:outline-bg-higher",
-  outline: "outline-bg-default outline-1",
-  ghost: "hover:bg-background-default",
-  primary: "bg-foreground text-background",
+  default: /* tailwind */ "bg-background-default hover:outline-bg-higher",
+  outline: /* tailwind */ "outline-background-default outline-1",
+  ghost: /* tailwind */ "hover:bg-background-default",
+  primary: /* tailwind */ "bg-foreground text-background",
 };
 
 export interface ButtonProps extends ComponentProps<"button"> {
