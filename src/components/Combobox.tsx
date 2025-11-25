@@ -124,7 +124,7 @@ Combobox.Content = function ComboboxContent(props: { children: JSX.Element; clas
   ctx.contentElement = (
     <div
       class={cn(
-        "bg-background-default border-background-higher absolute z-30 flex w-64 flex-col rounded-2xl border-1 px-1.5 py-1.5 max-h-128 overflow-y-auto",
+        "bg-background-default border-background-higher absolute z-30 flex max-h-128 w-64 flex-col overflow-y-auto rounded-2xl border-1 px-1.5 py-1.5",
         props.class,
       )}
     >
@@ -166,7 +166,7 @@ Combobox.Item = function ComboboxItem(props: {
       <button
         onClick={selectItem}
         class={cn(
-          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left not-disabled:cursor-pointer",
+          "flex items-center gap-3 rounded-xl px-3 py-1.5 text-left not-disabled:cursor-pointer",
           dropdownVariants[props.variant ?? "default"],
           props.class,
         )}

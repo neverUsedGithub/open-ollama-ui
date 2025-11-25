@@ -133,7 +133,7 @@ Dropdown.Item = function DropdownItem(props: {
     <button
       onClick={selectItem}
       class={cn(
-        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left not-disabled:cursor-pointer",
+        "flex items-center gap-3 rounded-xl px-3 py-1.5 text-left not-disabled:cursor-pointer",
         dropdownVariants[props.variant ?? "default"],
         props.class,
       )}

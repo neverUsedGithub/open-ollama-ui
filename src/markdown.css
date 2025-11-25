@@ -1,6 +1,8 @@
 
 
 .markdown-container {
+  @apply leading-7;
+  
   ul {
     @apply pl-5;
 
@@ -18,7 +20,7 @@
   }
 
   li {
-    @apply my-1 pl-2;
+    @apply pl-2;
   }
 
   h1 {
@@ -79,7 +81,7 @@
   }
 
   hr {
-    @apply text-background-higher my-2;
+    @apply text-background-higher my-8;
   }
 
   table {
