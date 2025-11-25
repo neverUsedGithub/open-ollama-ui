@@ -43,7 +43,7 @@ function SidebarExpanded(props: {
   setPreferences: Setter<UserPreferences>;
 }) {
   return (
-    <div class="border-background-higher flex w-[255px] flex-col gap-4 border-r p-2">
+    <div class="border-background-higher flex w-[255px] flex-col gap-4 border-r p-2 pr-3">
       <div class="flex justify-between">
         <Button variant="ghost" icon={true} onClick={() => props.chatManager.createNewChat()}>
           <img src="open-llm-ui.svg" />
@@ -152,7 +152,7 @@ export default function App() {
       </Show>
 
       <div class="flex h-screen max-h-screen flex-1 flex-col">
-        <div class="flex h-12 justify-between gap-2 px-3.5 py-2 text-sm">
+        <div class="flex h-12 justify-between gap-2 px-3 py-2 text-sm">
           <Combobox>
             <Combobox.Trigger>
               <Button variant="ghost">
