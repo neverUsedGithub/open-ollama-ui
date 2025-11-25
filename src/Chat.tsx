@@ -1,5 +1,4 @@
 import { Dropdown } from "@/components/Dropdown";
-import { IconButton } from "@/components/IconButton";
 import * as imageGen from "@/imagegen";
 import type {
   AssistantChatMessage,
@@ -38,6 +37,7 @@ import { inputTags } from "./inputtags";
 import { modelTools } from "./tools";
 
 import "./Chat.css";
+import { Button } from "./components/Button";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerURL;
 
@@ -99,15 +99,15 @@ function SendButton(props: {
   return (
     <>
       <Show when={props.modelState === "idle"}>
-        <IconButton
-          icon={<ArrowUpIcon />}
-          class={cn(props.allowMessage && "bg-foreground text-background")}
-          onClick={props.sendMessage}
-        />
+        <Button icon={true} variant="primary" disabled={!props.allowMessage} onClick={props.sendMessage}>
+          <ArrowUpIcon />
+        </Button>
       </Show>
 
       <Show when={props.modelState !== "idle"}>
-        <IconButton icon={<SquareIcon fill="white" />} class="text-foreground p-3" onClick={props.stopMessage} />
+        <Button icon={true} class="hover:bg-background-higher p-3" onClick={props.stopMessage}>
+          <SquareIcon class="text-foreground-muted" />
+        </Button>
       </Show>
     </>
   );
@@ -597,7 +597,7 @@ export function ChatView(props: ChatViewProps) {
         <Show when={chatHistoryEmpty()}>
           <div class="flex h-1/2 items-end justify-center gap-4">
             <img src="open-llm-ui.svg" alt="" class="size-12" />
-            <h2 class="font-handwriting -translate-y-1 text-4xl max-w-72 line-clamp-1">{props.chat.selectedModel()}</h2>
+            <h2 class="font-handwriting line-clamp-1 max-w-72 -translate-y-1 text-4xl">{props.chat.selectedModel()}</h2>
           </div>
         </Show>
 

@@ -11,5 +11,9 @@ const badgeVariants: Record<BadgeVariant, string> = {
 };
 
 export function Badge(props: { variant?: BadgeVariant; class?: string; children?: JSXElement }) {
-  return <div class={cn("rounded-lg px-3 py-1 outline", badgeVariants[props.variant ?? "default"], props.class)}>{props.children}</div>;
+  return (
+    <div class={cn("rounded-lg px-3 py-1 outline", badgeVariants[props.variant ?? "default"], props.class)}>
+      {props.children}
+    </div>
+  );
 }

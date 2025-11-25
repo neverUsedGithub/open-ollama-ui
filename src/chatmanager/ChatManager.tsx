@@ -203,6 +203,10 @@ export class ChatManagerChat {
     return this.loaded;
   }
 
+  isTemporary() {
+    return this.id === "";
+  }
+
   onOpen() {
     this.loadChat();
   }
