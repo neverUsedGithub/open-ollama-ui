@@ -428,6 +428,7 @@ export class ChatManagerChat {
       if (capabilities.thinking) {
         useThinking = true;
 
+        // TODO: improve gpt-oss detection, probably family field in metadata?
         if (selectedModel.includes("gpt-oss")) {
           useThinking = "medium";
 
