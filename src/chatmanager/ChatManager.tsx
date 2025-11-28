@@ -743,7 +743,7 @@ export class ChatManager {
 
   private async loadModels() {
     const result = await ollama.list();
-    this.setAvailableModels(result.models.map((model) => model.name));
+    this.setAvailableModels(result.models.map((model) => model.name).sort());
   }
 
   private loadChats() {
