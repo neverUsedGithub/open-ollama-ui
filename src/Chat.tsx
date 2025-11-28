@@ -593,9 +593,9 @@ export function ChatView(props: ChatViewProps) {
 
   return (
     <div class="flex h-full max-h-full p-8">
-      <div class="flex w-8/12 flex-1 flex-col gap-8">
+      <div class="flex w-8/12 flex-1 flex-col">
         <Show when={chatHistoryEmpty()}>
-          <div class="flex h-1/2 items-end justify-center gap-4">
+          <div class="mb-8 flex h-1/2 items-end justify-center gap-4">
             <img src="open-ollama-ui.svg" alt="" class="size-12" />
             <h2 class="font-handwriting line-clamp-1 max-w-72 -translate-y-1 text-4xl">{props.chat.selectedModel()}</h2>
           </div>
