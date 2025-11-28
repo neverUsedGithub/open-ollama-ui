@@ -326,9 +326,13 @@ Output only the extracted information.`,
           description: "The document id to search for the provided query or queries.",
         },
         query: {
-          type: "string[]",
+          type: "array",
+          // @ts-expect-error
+          items: {
+            type: "string",
+          },
           description:
-            "The user's question or topic to search for in the document. The model should generate around 5 semantically varied queries that cover different ways the relevant information might appear. Queries should focus on meaning rather than exact wording, and avoid including instructions or filler text. These queries will be used for embedding-based search.",
+            "The user's question or topic to search for in the document. You should generate around 5 semantically varied queries that cover different ways the relevant information might appear. Queries should focus on meaning rather than exact wording, and avoid including instructions or filler text. These queries will be used for embedding-based search.",
         },
       },
       required: ["document_id", "query"],
@@ -369,7 +373,7 @@ Output only the extracted information.`,
       }
 
       const response = await ollama.chat({
-        model: "gemma3:4b",
+        model: "qwen3:4b-instruct-2507-fp16",
         options: {
           num_ctx: 16_000,
         },
@@ -434,9 +438,9 @@ Output only the extracted information.`,
       const stitched = contextDocument.chunks.join("");
 
       const response = await ollama.chat({
-        model: "gemma3:4b",
+        model: "qwen3:4b-instruct-2507-fp16",
         options: {
-          num_ctx: 64000,
+          num_ctx: 64_000,
         },
         messages: [
           {
