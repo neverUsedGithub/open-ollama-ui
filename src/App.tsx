@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show, type JSX, type Setter } from "solid-js";
+import { createEffect, createSignal, For, Show, type Accessor, type JSX, type Setter } from "solid-js";
 import { ChatView } from "./Chat";
 
 import ChevronRightIcon from "lucide-solid/icons/chevron-right";
@@ -15,6 +15,8 @@ import { Combobox } from "./components/Combobox";
 import { Button } from "./components/Button";
 import { loadPreferences, savePreferences } from "./serialization/preferences";
 import type { UserPreferences } from "./types";
+import { database } from "./indexeddb";
+import { basePreferences } from "./util/constant";
 
 function ChatItem(props: { children: JSX.Element; onClick: () => void; class?: string }) {
   let chatItemElement!: HTMLButtonElement;
@@ -27,7 +29,7 @@ function ChatItem(props: { children: JSX.Element; onClick: () => void; class?: s
 
   return (
     <Button
-      class={cn("pl-2 py-1.5 text-sm hover:bg-zinc-800", props.class)}
+      class={cn("py-1.5 pl-2 text-sm hover:bg-zinc-800", props.class)}
       variant="ghost"
       onClick={chatItemClick}
       ref={chatItemElement}
@@ -114,7 +116,7 @@ function SidebarCollapsed(props: {
   setPreferences: Setter<UserPreferences>;
 }) {
   return (
-    <div class="flex flex-col gap-4 py-2 px-2">
+    <div class="flex flex-col gap-4 px-2 py-2">
       <div class="flex flex-col gap-2">
         <Button
           variant="ghost"
@@ -135,9 +137,21 @@ function SidebarCollapsed(props: {
   );
 }
 
+function promiseSignal<T>(promise: Promise<T>, defaultValue: T): [Accessor<T>, Setter<T>] {
+  const [get, set] = createSignal(defaultValue);
+
+  // @ts-expect-error
+  promise.then((value) => set(value));
+
+  return [get, set];
+}
+
 export default function App() {
-  const [preferences, setPreferences] = createSignal(loadPreferences());
+  const [preferences, setPreferences] = promiseSignal(loadPreferences(), basePreferences);
   const chatManager = ChatManager.getInstance(preferences, setPreferences);
+
+  // @ts-expect-error
+  window.database = database;
 
   createEffect(() => savePreferences(preferences()));
 

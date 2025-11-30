@@ -346,6 +346,7 @@ export class ChatManagerChat {
   public delete() {
     if (this.ollamaResponse) this.ollamaResponse.abort();
     serializeChat.deleteChat(this.id);
+    serializeChatList.deleteChat(this.id);
   }
 
   public sendMessage(
@@ -417,7 +418,7 @@ export class ChatManagerChat {
     this.addDisplayMessage(assistantMessage);
 
     await this.processDocumentUploads(fileUploads);
-    
+
     let newTurn = false;
 
     let errored = false;
@@ -744,7 +745,6 @@ export class ChatManager {
     });
 
     this.loadChats();
-    this.autoSave();
     this.loadModels();
   }
 
@@ -761,9 +761,9 @@ export class ChatManager {
     this.setAvailableModels(result.models.map((model) => model.name).sort());
   }
 
-  private loadChats() {
+  private async loadChats() {
     try {
-      const chats = serializeChatList.loadChats();
+      const chats = await serializeChatList.loadChats();
       const loaded: ChatManagerChat[] = [];
 
       for (const chat of chats) {
@@ -779,24 +779,6 @@ export class ChatManager {
       console.error(error);
       console.warn("failed to load chats");
     }
-  }
-
-  private autoSave() {
-    globalEffect(() => {
-      const chats = this.chats();
-      untrack(() => this.saveChats(chats));
-    });
-  }
-
-  private saveChats(chats: ChatManagerChat[]) {
-    const chatData: ChatData[] = [];
-
-    for (const chat of chats) {
-      chat.saveChat();
-      chatData.push({ name: chat.name(), id: chat.id, model: chat.selectedModel() });
-    }
-
-    serializeChatList.saveChats(chatData);
   }
 
   deleteChat(chatId: string) {
@@ -826,6 +808,7 @@ export class ChatManager {
   }
 
   addChat(chat: ChatManagerChat) {
+    serializeChatList.addChat({ id: chat.id, model: chat.selectedModel(), name: chat.name() });
     this.setChats([...this.chats(), chat]);
   }
 

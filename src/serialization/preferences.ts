@@ -1,17 +1,28 @@
+import { database } from "@/indexeddb";
 import type { UserPreferences } from "@/types";
 import { basePreferences } from "@/util/constant";
 
-export function loadPreferences(): UserPreferences {
-  const preferences = localStorage.getItem("llm-ui-preferences");
-  if (preferences === null) return basePreferences;
-
-  try {
-    return Object.assign({}, basePreferences, JSON.parse(preferences));
-  } catch {
-    return basePreferences;
-  }
+export interface PreferenceEntry {
+  name: string;
+  value: any;
 }
 
-export function savePreferences(preferences: UserPreferences): void {
-  localStorage.setItem("llm-ui-preferences", JSON.stringify(preferences));
+export async function loadPreferences(): Promise<UserPreferences> {
+  const preferences: Record<string, any> = basePreferences;
+  const saved = await database.queryAll<PreferenceEntry>("preferences");
+
+  for (const entry of saved) {
+    preferences[entry.name] = entry.value;
+  }
+
+  return preferences as UserPreferences;
+}
+
+export async function savePreferences(preferences: UserPreferences): Promise<void> {
+  for (const name in preferences) {
+    await database.put("preferences", {
+      name: name,
+      value: preferences[name as keyof UserPreferences] as any,
+    });
+  }
 }

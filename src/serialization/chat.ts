@@ -1,4 +1,5 @@
 import { createChatMessage } from "@/chatmanager/ChatManager";
+import { database } from "@/indexeddb";
 import type { DisplayChatMessage, NativeChatMessage, RAGDocument, SubChatMessageData, UserFile } from "@/types";
 import { StringPool } from "@/util/stringpool";
 import { createDatabase, type DBSerializedData } from "@/vectordb";
@@ -31,33 +32,32 @@ export async function loadChat(chatId: string): Promise<
       documents: RAGDocument[];
     }
 > {
-  const chatData = localStorage.getItem(`llm-ui-chat-${chatId}`);
-  if (!chatData) return { exists: false };
-
-  const parsed: {
+  const chatData = await database.query<{
     stringPool: string[];
     messages: SavedChatMessage[];
     data: SavedNativeMessage[];
     documents: SavedRAGDocument[];
-  } = JSON.parse(chatData);
+  }>("chat-data", chatId);
+
+  if (!chatData) return { exists: false };
 
   const documents: RAGDocument[] = [];
   const messages: DisplayChatMessage[] = [];
   const nativeMessages: NativeChatMessage[] = [];
 
-  if (!("messages" in parsed) || !("data" in parsed)) throw new Error("malformed data");
+  if (!("messages" in chatData) || !("data" in chatData)) throw new Error("malformed data");
 
-  for (const message of parsed.data) {
+  for (const message of chatData.data) {
     const nativeMessage: NativeChatMessage = message as unknown as NativeChatMessage;
-    nativeMessage.content = parsed.stringPool[nativeMessage.content as unknown as number];
+    nativeMessage.content = chatData.stringPool[nativeMessage.content as unknown as number];
 
     if ("thinking" in nativeMessage)
-      nativeMessage.thinking = parsed.stringPool[nativeMessage.thinking as unknown as number];
+      nativeMessage.thinking = chatData.stringPool[nativeMessage.thinking as unknown as number];
 
     nativeMessages.push(nativeMessage);
   }
 
-  for (const message of parsed.messages) {
+  for (const message of chatData.messages) {
     if (message.role === "user") {
       const userFiles: UserFile[] = [];
 
@@ -84,13 +84,13 @@ export async function loadChat(chatId: string): Promise<
         }
       }
 
-      messages.push(createChatMessage("user", parsed.stringPool[message.content], userFiles));
+      messages.push(createChatMessage("user", chatData.stringPool[message.content], userFiles));
     } else if (message.role === "assistant") {
       const assistantMessage = createChatMessage("assistant");
 
       for (const subData of message.messages) {
         if (subData.kind === "text") {
-          subData.content = parsed.stringPool[subData.content as unknown as number];
+          subData.content = chatData.stringPool[subData.content as unknown as number];
         }
 
         if (subData.kind === "attachment") {
@@ -109,7 +109,7 @@ export async function loadChat(chatId: string): Promise<
     }
   }
 
-  for (const document of parsed.documents) {
+  for (const document of chatData.documents) {
     const db = await createDatabase();
 
     db.load(document.vectors);
@@ -221,17 +221,15 @@ export async function saveChat(
     }
   }
 
-  localStorage.setItem(
-    `llm-ui-chat-${chatId}`,
-    JSON.stringify({
-      messages: saveChatMessages,
-      data: saveDataMessages,
-      stringPool: stringPool.finalize(),
-      documents: saveDocuments,
-    }),
-  );
+  await database.put("chat-data", {
+    id: chatId,
+    messages: saveChatMessages,
+    data: saveDataMessages,
+    stringPool: stringPool.finalize(),
+    documents: saveDocuments,
+  });
 }
 
-export function deleteChat(chatId: string) {
-  localStorage.removeItem(`llm-ui-chat-${chatId}`);
+export async function deleteChat(chatId: string) {
+  await database.delete("chat-data", chatId);
 }
