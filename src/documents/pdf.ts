@@ -1,3 +1,4 @@
+import type { UserDocumentFile } from "@/types";
 import * as pdfjs from "pdfjs-dist";
 
 interface TextLine {
@@ -7,8 +8,8 @@ interface TextLine {
   strings: string[];
 }
 
-export async function extractPDF(source: Uint8Array): Promise<string[]> {
-  const task = pdfjs.getDocument(source);
+export async function extractPDF(source: UserDocumentFile): Promise<string[]> {
+  const task = pdfjs.getDocument(new Uint8Array(source.content));
   const pdf = await task.promise;
 
   let pages: string[] = [];
@@ -40,7 +41,7 @@ export async function extractPDF(source: Uint8Array): Promise<string[]> {
 
     for (const y of yValues) {
       const line = textLines[y];
-      const spaces = Math.max(Math.floor((line.posX - minX) / line.scaleX), 0);
+      const spaces = Math.max(Math.min(Math.floor((line.posX - minX) / line.scaleX), 64), 0);
       const content = " ".repeat(spaces) + line.strings.join("");
 
       stringified += content + "\n";

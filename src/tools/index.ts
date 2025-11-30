@@ -255,12 +255,12 @@ Refinement Process:
 
         const output = turndown.turndown(contentEl);
 
-        const summaryModel = "qwen3:4b-instruct-2507-fp16";
+        const summaryModel = "qwen3:4b-instruct-2507-q8_0";
         const summarized = await ollama.chat({
           model: summaryModel,
           stream: false,
           options: {
-            num_ctx: 16_000,
+            num_ctx: 32_000,
           },
           messages: [
             {
@@ -373,9 +373,9 @@ Output only the extracted information.`,
       }
 
       const response = await ollama.chat({
-        model: "qwen3:4b-instruct-2507-fp16",
+        model: "qwen3:4b-instruct-2507-q8_0",
         options: {
-          num_ctx: 16_000,
+          num_ctx: 32_000,
         },
         messages: [
           {
@@ -438,9 +438,9 @@ Output only the extracted information.`,
       const stitched = contextDocument.chunks.join("");
 
       const response = await ollama.chat({
-        model: "qwen3:4b-instruct-2507-fp16",
+        model: "qwen3:4b-instruct-2507-q8_0",
         options: {
-          num_ctx: 64_000,
+          num_ctx: 32_000,
         },
         messages: [
           {

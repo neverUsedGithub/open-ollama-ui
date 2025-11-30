@@ -4,7 +4,9 @@ import * as serializeChat from "@/serialization/chat";
 import * as serializeChatList from "@/serialization/chatList";
 import type {
   AssistantChatMessage,
+  AttachmentSubChatMessage,
   ChatData,
+  ChatMessageAttachment,
   ChatMessageState,
   DisplayChatMessage,
   InputTag,
@@ -20,6 +22,7 @@ import type {
   ToolContext,
   ToolOutput,
   UserChatMessage,
+  UserDocumentFile,
   UserFile,
   UserPreferences,
 } from "@/types";
@@ -291,7 +294,7 @@ export class ChatManagerChat {
 
   private async processDocumentUploads(fileUploads: UserFile[]) {
     // const pdfRenderCanvas = document.createElement("canvas");
-    const partialDocuments: { name: string; chunks: string[] }[] = [];
+    const partialDocuments: { file: UserDocumentFile; chunks: string[] }[] = [];
 
     for (const file of fileUploads) {
       if (file.kind !== "document") continue;
@@ -299,9 +302,10 @@ export class ChatManagerChat {
       console.group(`[DOC] ${file.fileName}`);
 
       if (file.fileName.endsWith(".pdf")) {
-        const pages = await extractPDF(file.content);
-
-        partialDocuments.push({ name: file.fileName, chunks: pages });
+        // Add progress for extraction too? Right now it is fast, because no OCR is involved,
+        // but later it would be valuable.
+        const pages = await extractPDF(file);
+        partialDocuments.push({ file, chunks: pages });
       } else {
         throw new Error(`cannot parse document '${file.fileName}'`);
       }
@@ -312,21 +316,27 @@ export class ChatManagerChat {
     for (const doc of partialDocuments) {
       const db = await vectordb.createDatabase();
 
+      doc.file.setProgress(0);
+
       for (let i = 0; i < doc.chunks.length; i++) {
         console.log(`[EMBED] processing chunk`);
         const vector = await embedding.generateEmbedding(doc.chunks[i]);
 
         console.log(`[RAG] appending chunk`);
         db.add(i, [vector]);
+
+        doc.file.setProgress((i + 1) / doc.chunks.length);
       }
+
+      doc.file.setProgress(1);
 
       this.addNativeMessage({
         role: "user",
-        content: `[user uploaded document '${doc.name}', document id ${this.ragDocuments.length}]`,
+        content: `[user uploaded document '${doc.file.fileName}', document id ${this.ragDocuments.length}]`,
       });
 
       this.ragDocuments.push({
-        name: doc.name,
+        name: doc.file.fileName,
         chunks: doc.chunks,
         vectors: db,
       });
@@ -379,8 +389,6 @@ export class ChatManagerChat {
 
     this.changeSystemMessage({ role: modelSystemRole, content: buildSystemPrompt({ tools: promptTools }) });
 
-    await this.processDocumentUploads(fileUploads);
-
     let userImages: string[] = [];
 
     for (const file of fileUploads) {
@@ -408,6 +416,8 @@ export class ChatManagerChat {
     this.addDisplayMessage(userChatMessage);
     this.addDisplayMessage(assistantMessage);
 
+    await this.processDocumentUploads(fileUploads);
+    
     let newTurn = false;
 
     let errored = false;

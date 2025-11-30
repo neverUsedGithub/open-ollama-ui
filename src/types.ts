@@ -28,14 +28,18 @@ export interface AssistantChatMessage {
 
 export interface UserImageFile {
   kind: "image";
-  content: Uint8Array;
   encoded: string;
+  content: Uint8Array;
+  fileName: string;
 }
 
 export interface UserDocumentFile {
   kind: "document";
   content: Uint8Array;
   fileName: string;
+
+  progress: Accessor<number>;
+  setProgress: Setter<number>;
 }
 
 export type UserFile = UserImageFile | UserDocumentFile;

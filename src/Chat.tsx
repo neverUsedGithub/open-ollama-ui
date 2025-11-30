@@ -10,6 +10,7 @@ import type {
   SubChatMessage,
   SupportContext,
   TextSubChatMessage,
+  UserDocumentFile,
   UserFile,
 } from "@/types";
 import { cn } from "@/util/cn";
@@ -25,6 +26,7 @@ import PaperclipIcon from "lucide-solid/icons/paperclip";
 import PlusIcon from "lucide-solid/icons/plus";
 import SquareIcon from "lucide-solid/icons/square";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
+import FileIcon from "lucide-solid/icons/file";
 import XIcon from "lucide-solid/icons/x";
 import ollama from "ollama/browser";
 import * as pdfjs from "pdfjs-dist";
@@ -114,8 +116,9 @@ function SendButton(props: {
 }
 
 function ChatMessageAttachmentView(props: { attachment: ChatMessageAttachment }) {
-  if (props.attachment.type === "image")
+  if (props.attachment.type === "image") {
     return <img class="ml-6 w-full rounded-2xl sm:w-1/2" src={URL.createObjectURL(props.attachment.source)} />;
+  }
 }
 
 function formatErrorData(error: unknown) {
@@ -147,8 +150,9 @@ function renderLaTeX(codeblock: HTMLElement) {
 }
 
 function SubMessageView(props: { subMessage: SubChatMessage; messageState: ChatMessageState; latest: boolean }) {
-  if (props.subMessage.kind === "attachment")
+  if (props.subMessage.kind === "attachment") {
     return <ChatMessageAttachmentView attachment={props.subMessage.attachment} />;
+  }
 
   if (props.subMessage.kind === "toolcall") {
     const toolName = props.subMessage.toolName;
@@ -334,11 +338,47 @@ function SubMessageView(props: { subMessage: SubChatMessage; messageState: ChatM
   return messageContainer;
 }
 
+function UserFileView(props: { file: UserFile }) {
+  if (props.file.kind === "image") return null;
+
+  const fileProgress = createMemo(() => Math.round((props.file as UserDocumentFile).progress() * 100));
+
+  return (
+    <div class="bg-background-default border-border flex w-fit min-w-82 items-center gap-2 rounded-4xl border p-2">
+      <div class="relative grid min-h-10 min-w-10 place-content-center rounded-4xl bg-red-500 p-2">
+        <FileIcon class="size-4" />
+        <svg viewBox="0 0 100 100" class="absolute top-0 left-0 text-red-200">
+          <circle
+            r="48"
+            cx="50"
+            cy="50"
+            stroke-width="5"
+            stroke="currentColor"
+            fill="none"
+            pathLength="100"
+            stroke-dasharray={`${fileProgress()} ${100 - fileProgress()}`}
+            stroke-dashoffset="25"
+          />
+        </svg>
+      </div>
+      <div class="flex flex-col text-sm">
+        <span class="line-clamp-1 font-bold">
+          {props.file.fileName}
+        </span>
+        <span>Document</span>
+      </div>
+    </div>
+  );
+}
+
 function ChatMessageView(props: { message: DisplayChatMessage }) {
   if (props.message.role === "user") {
     return (
-      <div class="bg-background-default h-fit w-fit max-w-3/4 self-end rounded-2xl p-2 px-4">
-        <pre class="text-wrap break-words">{props.message.content}</pre>
+      <div class="flex flex-col items-end gap-2">
+        <For each={props.message.files}>{(file) => <UserFileView file={file} />}</For>
+        <div class="bg-background-default h-fit w-fit max-w-3/4 rounded-2xl p-2 px-4">
+          <pre class="text-wrap break-words">{props.message.content}</pre>
+        </div>
       </div>
     );
   }
@@ -544,9 +584,16 @@ export function ChatView(props: ChatViewProps) {
         const bytes = await file.bytes();
 
         if (file.name.endsWith(".pdf")) {
-          newFiles.push({ kind: "document", fileName: file.name, content: bytes });
+          const [progress, setProgress] = createSignal(0);
+
+          newFiles.push({ kind: "document", fileName: file.name, content: bytes, progress, setProgress });
         } else {
-          newFiles.push({ kind: "image", content: bytes, encoded: await ollama.encodeImage(bytes) });
+          newFiles.push({
+            kind: "image",
+            fileName: file.name,
+            content: bytes,
+            encoded: await ollama.encodeImage(bytes),
+          });
         }
       }
 
@@ -595,7 +642,7 @@ export function ChatView(props: ChatViewProps) {
     <div class="flex h-full max-h-full p-8">
       <div class="flex w-8/12 flex-1 flex-col">
         <Show when={chatHistoryEmpty()}>
-          <div class="mb-8 flex h-1/2 items-end justify-center gap-4">
+          <div class={cn("mb-8 flex h-1/2 items-end justify-center gap-4", userFileUploads().length > 0 && "mb-24")}>
             <img src="open-ollama-ui.svg" alt="" class="size-12" />
             <h2 class="font-handwriting line-clamp-1 max-w-72 -translate-y-1 text-4xl">{props.chat.selectedModel()}</h2>
           </div>
@@ -611,7 +658,26 @@ export function ChatView(props: ChatViewProps) {
           </div>
         </Show>
 
-        <div class="bg-background mx-auto flex w-full max-w-[800px] flex-col items-center">
+        <div class="relative mx-auto flex w-full max-w-[800px] flex-col items-center bg-transparent">
+          <div class="absolute bottom-full left-0 flex w-full -translate-y-2 gap-2 overflow-x-hidden">
+            <For each={userFileUploads()}>
+              {(upload) => (
+                <button
+                  class="bg-background-default border-border flex min-w-82 cursor-pointer items-center gap-2 rounded-4xl border p-2 text-left hover:[&>:nth-child(1)>:nth-child(1)]:hidden hover:[&>:nth-child(1)>:nth-child(2)]:block"
+                  onClick={() => setUserFileUploads((uploads) => uploads.filter((i) => i !== upload))}
+                >
+                  <div class="grid min-h-10 min-w-10 cursor-pointer place-content-center rounded-4xl bg-red-500 p-2">
+                    <FileIcon class="size-4" />
+                    <XIcon class="hidden size-5" />
+                  </div>
+                  <div class="flex flex-col text-sm">
+                    <span class="line-clamp-1 font-bold">{upload.fileName}</span>
+                    <span>{upload.kind === "document" ? "Document" : "Image"}</span>
+                  </div>
+                </button>
+              )}
+            </For>
+          </div>
           <div
             class={cn(
               "bg-background-default border-border flex w-full items-center gap-2 rounded-4xl border px-3 shadow-xl/20",

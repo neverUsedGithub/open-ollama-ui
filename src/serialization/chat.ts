@@ -2,9 +2,13 @@ import { createChatMessage } from "@/chatmanager/ChatManager";
 import type { DisplayChatMessage, NativeChatMessage, RAGDocument, SubChatMessageData, UserFile } from "@/types";
 import { StringPool } from "@/util/stringpool";
 import { createDatabase, type DBSerializedData } from "@/vectordb";
+import ollama from "ollama/browser";
+import { createSignal, runWithOwner } from "solid-js";
+
+type SavedUserFile = { kind: "image" | "document"; fileName: string; data: string };
 
 type SavedChatMessage =
-  | { role: "user"; content: number; files: UserFile[] }
+  | { role: "user"; content: number; files: SavedUserFile[] }
   | { role: "assistant"; messages: SubChatMessageData[] };
 
 type ExcludeKeys<T, U extends keyof T> = { [K in Exclude<keyof T, U>]: T[K] };
@@ -55,7 +59,32 @@ export async function loadChat(chatId: string): Promise<
 
   for (const message of parsed.messages) {
     if (message.role === "user") {
-      messages.push(createChatMessage("user", parsed.stringPool[message.content], []));
+      const userFiles: UserFile[] = [];
+
+      for (const file of message.files) {
+        const bytes = new TextEncoder().encode(atob(file.data));
+
+        if (file.kind === "image") {
+          userFiles.push({
+            kind: "image",
+            fileName: file.fileName,
+            content: bytes,
+            encoded: await ollama.encodeImage(bytes),
+          });
+        } else {
+          const [progress, setProgress] = runWithOwner(null, () => createSignal(1))!;
+
+          userFiles.push({
+            kind: "document",
+            fileName: file.fileName,
+            content: bytes,
+            progress,
+            setProgress,
+          });
+        }
+      }
+
+      messages.push(createChatMessage("user", parsed.stringPool[message.content], userFiles));
     } else if (message.role === "assistant") {
       const assistantMessage = createChatMessage("assistant");
 
@@ -131,9 +160,29 @@ export async function saveChat(
 
   for (const message of chatMessages) {
     if (message.role === "user") {
+      const saveFiles: SavedUserFile[] = [];
+
+      for (const file of message.files) {
+        if (file.kind === "image") {
+          saveFiles.push({
+            kind: "image",
+            fileName: file.fileName,
+            data: file.encoded,
+          });
+        } else {
+          saveFiles.push({
+            kind: "document",
+            fileName: file.fileName,
+            // So uh, encodeImage accepts arbitrary binary data, so this should be okay?
+            // Don't know about encoding it on every save request though.
+            data: await ollama.encodeImage(file.content),
+          });
+        }
+      }
+
       saveChatMessages.push({
         role: "user",
-        files: message.files,
+        files: saveFiles,
         content: stringPool.add(message.content),
       });
     } else {
