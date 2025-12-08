@@ -136,8 +136,10 @@ export class ChatManagerChat {
   public name: Accessor<string>;
   protected setName: Setter<string>;
 
-  public selectedModel: Accessor<string>;
-  public setSelectedModel: Setter<string>;
+  private selectedModel: Accessor<string | null>;
+  private setSelectedModel: Setter<string | null>;
+
+  public currentModel: Accessor<string>;
 
   public selectedModelMetadata: Accessor<ModelMetadata | null>;
   private setSelectedModelMetadadata: Setter<ModelMetadata | null>;
@@ -149,7 +151,7 @@ export class ChatManagerChat {
   public loaded: boolean;
   public ragDocuments: RAGDocument[];
 
-  constructor(id: string, name: string, model: string) {
+  constructor(id: string, name: string, model: string | null, preferences: Accessor<UserPreferences>) {
     this.id = id;
     this.loaded = false;
     this.ragDocuments = [];
@@ -159,20 +161,29 @@ export class ChatManagerChat {
 
     [this.name, this.setName] = createSignal(name);
     [this.modelState, this.setModelState] = createSignal<ModelState>("idle");
-    [this.selectedModel, this.setSelectedModel] = createSignal<string>(model);
+    [this.selectedModel, this.setSelectedModel] = createSignal<string | null>(model);
     [this.selectedModelMetadata, this.setSelectedModelMetadadata] = createSignal<ModelMetadata | null>(null);
 
     [this.nativeMessages, this.setNativeMessages] = createSignal<NativeChatMessage[]>([]);
     [this.displayMessages, this.setDisplayMessages] = createSignal<DisplayChatMessage[]>([]);
 
+    this.currentModel = createMemo(() => {
+      const selectedModel = this.selectedModel();
+      const defaultModel = preferences().defaultModel;
+
+      return selectedModel ?? defaultModel;
+    });
+
     this.autoSave();
 
     createEffect(() => {
-      const model = this.selectedModel();
-
       this.setSelectedModelMetadadata(null);
-      this.loadModelMetadata(model);
+      this.loadModelMetadata(this.currentModel());
     });
+  }
+
+  public setCurrentModel(model: string) {
+    this.setSelectedModel(model);
   }
 
   private async loadModelMetadata(model: string) {
@@ -681,15 +692,15 @@ class ChatManagerNewChat extends ChatManagerChat {
 
   public onCreate: (() => void) | null;
 
-  constructor(model: string, setDefaultModel: (model: string) => void) {
-    super("", "", model);
+  constructor(preferences: Accessor<UserPreferences>, setDefaultModel: (model: string) => void) {
+    super("", "", null, preferences);
 
     this.created = false;
     this.onCreate = null;
 
     createEffect(() => {
       if (!this.created) {
-        setDefaultModel(this.selectedModel());
+        setDefaultModel(this.currentModel());
       }
     });
   }
@@ -777,7 +788,7 @@ export class ChatManager {
       const loaded: ChatManagerChat[] = [];
 
       for (const chat of chats) {
-        loaded.push(runWithOwner(null, () => new ChatManagerChat(chat.id, chat.name, chat.model))!);
+        loaded.push(runWithOwner(null, () => new ChatManagerChat(chat.id, chat.name, chat.model, this.preferences))!);
       }
 
       this.setChats(loaded);
@@ -819,7 +830,7 @@ export class ChatManager {
   }
 
   addChat(chat: ChatManagerChat) {
-    serializeChatList.addChat({ id: chat.id, model: chat.selectedModel(), name: chat.name() });
+    serializeChatList.addChat({ id: chat.id, model: chat.currentModel(), name: chat.name() });
     this.setChats([...this.chats(), chat]);
   }
 
@@ -830,7 +841,7 @@ export class ChatManager {
       const temporary = runWithOwner(
         null,
         () =>
-          new ChatManagerNewChat(this.preferences().defaultModel, (newModel) =>
+          new ChatManagerNewChat(this.preferences, (newModel) =>
             this.setPreferences((current) => ({ ...current, defaultModel: newModel })),
           ),
       )!;

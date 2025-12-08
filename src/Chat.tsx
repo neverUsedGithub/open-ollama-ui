@@ -362,9 +362,7 @@ function UserFileView(props: { file: UserFile }) {
         </svg>
       </div>
       <div class="flex flex-col text-sm">
-        <span class="line-clamp-1 font-bold">
-          {props.file.fileName}
-        </span>
+        <span class="line-clamp-1 font-bold">{props.file.fileName}</span>
         <span>Document</span>
       </div>
     </div>
@@ -538,7 +536,7 @@ export function ChatView(props: ChatViewProps) {
   async function sendMessage(text: string) {
     const toolChecks = toolSupport();
     const result = props.chat.sendMessage(
-      props.chat.selectedModel(),
+      props.chat.currentModel(),
 
       text,
       userFileUploads(),
@@ -644,7 +642,7 @@ export function ChatView(props: ChatViewProps) {
         <Show when={chatHistoryEmpty()}>
           <div class={cn("mb-8 flex h-1/2 items-end justify-center gap-4", userFileUploads().length > 0 && "mb-24")}>
             <img src="open-ollama-ui.svg" alt="" class="size-12" />
-            <h2 class="font-handwriting line-clamp-1 max-w-72 -translate-y-1 text-4xl">{props.chat.selectedModel()}</h2>
+            <h2 class="font-handwriting line-clamp-1 max-w-72 -translate-y-1 text-4xl">{props.chat.currentModel()}</h2>
           </div>
         </Show>
 

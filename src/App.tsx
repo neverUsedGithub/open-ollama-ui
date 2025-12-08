@@ -170,14 +170,14 @@ export default function App() {
           <Combobox>
             <Combobox.Trigger>
               <Button variant="ghost">
-                {chatManager.currentChat().selectedModel()}
+                {chatManager.currentChat().currentModel()}
                 <ChevronDownIcon class="text-foreground-muted size-4" />
               </Button>
             </Combobox.Trigger>
             <Combobox.Content class="top-full mt-2">
               <For each={chatManager.availableModels()}>
                 {(model) => (
-                  <Combobox.Item value={model} onSelect={() => chatManager.currentChat().setSelectedModel(model)}>
+                  <Combobox.Item value={model} onSelect={() => chatManager.currentChat().setCurrentModel(model)}>
                     {model}
                   </Combobox.Item>
                 )}
