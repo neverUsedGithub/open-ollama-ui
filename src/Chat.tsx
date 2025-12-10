@@ -646,8 +646,8 @@ export function ChatView(props: ChatViewProps) {
       <div class="flex w-8/12 flex-1 flex-col">
         <Show when={chatHistoryEmpty()}>
           <div class={cn("mb-8 flex h-1/2 items-end justify-center gap-4", userFileUploads().length > 0 && "mb-24")}>
-            <img src="open-ollama-ui.svg" alt="" class="size-12" />
-            <h2 class="font-handwriting line-clamp-1 max-w-72 -translate-y-1 text-4xl">
+            <img src="open-ollama-ui.svg" alt="" class="size-8 sm:size-12" />
+            <h2 class="font-handwriting line-clamp-1 max-w-72 text-2xl sm:-translate-y-1 sm:text-4xl">
               {props.chat.currentModel().identifier}
             </h2>
           </div>
@@ -739,7 +739,7 @@ export function ChatView(props: ChatViewProps) {
           </div>
 
           <Show when={chatHistoryEmpty()}>
-            <div class="grid w-full grid-cols-1 grid-rows-2 gap-2 pt-4 md:grid-cols-2 lg:grid-cols-3">
+            <div class="grid w-full grid-cols-1 grid-rows-2 gap-2 pt-4 sm:grid-cols-2 md:grid-cols-3">
               {promptTemplates.map((template) => (
                 <button
                   class="bg-background-default hover:bg-background-higher hover:[&>.icon]:text-background-highest relative cursor-pointer overflow-hidden rounded-2xl p-4 text-left"

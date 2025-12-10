@@ -41,7 +41,7 @@ function ChatItem(props: { children: JSX.Element; onClick: () => void; class?: s
 
 function SidebarExpanded(props: { chatManager: ChatManager; preferences: UserPreferences }) {
   return (
-    <div class="border-background-higher flex w-[255px] flex-col gap-4 border-r p-2 pr-3">
+    <div class="border-background-higher bg-background absolute top-0 left-0 z-20 flex h-dvh w-[255px] flex-col gap-4 border-r p-2 pr-3 sm:static">
       <div class="flex justify-between">
         <Button variant="ghost" icon={true} onClick={() => props.chatManager.createNewChat()}>
           <img src="open-ollama-ui.svg" />
@@ -177,7 +177,7 @@ export default function App() {
   window.database = database;
 
   return (
-    <div class="flex">
+    <div class={cn("relative flex", preferences.sidebarExpanded && "pl-[48px]")}>
       <Show when={preferences.sidebarExpanded}>
         <SidebarExpanded chatManager={chatManager} preferences={preferences} />
       </Show>
@@ -186,7 +186,7 @@ export default function App() {
         <SidebarCollapsed chatManager={chatManager} preferences={preferences} />
       </Show>
 
-      <div class="flex h-screen max-h-screen flex-1 flex-col">
+      <div class="flex h-dvh max-h-dvh flex-1 flex-col">
         <div class="flex h-12 justify-between gap-2 px-3 py-2 text-sm">
           <Combobox>
             <Combobox.Trigger>
