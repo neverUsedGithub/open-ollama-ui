@@ -11,6 +11,6 @@ export abstract class ModelProvider {
     tools: ModelTool[] | null,
     stream: (chunk: StreamChunk) => void,
     signal: AbortSignal,
-    thinking: boolean | "low" | "medium" | "high",
+    thinking: boolean | "low" | "medium" | "high" | undefined,
   ): Promise<void>;
 }

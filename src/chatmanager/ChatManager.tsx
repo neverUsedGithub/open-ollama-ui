@@ -454,7 +454,7 @@ export class ChatManagerChat {
 
     let errored = false;
     let error: unknown = null;
-    let useThinking: boolean | "low" | "medium" | "high" = false;
+    let useThinking: boolean | "low" | "medium" | "high" | undefined = undefined;
 
     if (capabilities.thinking) {
       useThinking = true;

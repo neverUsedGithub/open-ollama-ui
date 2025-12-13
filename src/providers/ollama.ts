@@ -45,7 +45,7 @@ export class OllamaProvider extends ModelProvider {
     tools: ModelTool[] | null,
     stream: (chunk: StreamChunk) => void,
     signal: AbortSignal,
-    thinking: boolean | "low" | "medium" | "high",
+    thinking: boolean | "low" | "medium" | "high" | undefined,
   ): Promise<void> {
     const response = await this.ollama.chat({
       stream: true,
