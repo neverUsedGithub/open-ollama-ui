@@ -202,7 +202,14 @@ export class ChatManagerChat {
     const provider = await this.chatManager.providerManager.getProvider(model.provider);
 
     if (provider) {
-      this.setSelectedModelMetadadata(await provider.queryModel(model.identifier));
+      const queryResult = await provider.queryModel(model.identifier);
+
+      if (this.currentModel().identifier !== model.identifier || this.currentModel().provider !== model.provider) {
+        // Stale data.
+        return;
+      }
+
+      this.setSelectedModelMetadadata(queryResult);
     } else {
       console.warn("failed to load model metadata, provider is null", model);
     }
@@ -457,6 +464,7 @@ export class ChatManagerChat {
     let useThinking: boolean | "low" | "medium" | "high" | undefined = undefined;
 
     if (capabilities.thinking) {
+      console.log("model can think.", capabilities);
       useThinking = true;
 
       // TODO: improve gpt-oss detection, probably family field in metadata?
