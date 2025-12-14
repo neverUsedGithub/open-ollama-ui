@@ -490,11 +490,22 @@ export function ChatView(props: ChatViewProps) {
     }
   });
 
+  function scrollChatToBottom(behavior?: ScrollBehavior) {
+    if (messagesContainer?.parentElement?.parentElement) {
+      messagesContainer.parentElement.parentElement.scrollTo({
+        top: messagesContainer.scrollHeight,
+        behavior: behavior ?? "smooth",
+      });
+    }
+  }
+
   let shouldScrollToBottom = true;
+  let chatFirstLoad = true;
 
   createEffect(() => {
     props.chat;
 
+    chatFirstLoad = true;
     shouldScrollToBottom = true;
   });
 
@@ -518,11 +529,13 @@ export function ChatView(props: ChatViewProps) {
       }
     }
 
+    const shouldScroll = chatFirstLoad;
+    chatFirstLoad = !props.chat.loaded;
+
+    requestAnimationFrame(() => shouldScroll && scrollChatToBottom("instant"));
+
     if (messagesContainer?.parentElement?.parentElement && shouldScrollToBottom) {
-      messagesContainer.parentElement.parentElement.scrollTo({
-        top: messagesContainer.scrollHeight,
-        behavior: "smooth",
-      });
+      scrollChatToBottom();
     }
   });
 
