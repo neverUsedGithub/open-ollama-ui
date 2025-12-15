@@ -27,6 +27,8 @@ import SquareIcon from "lucide-solid/icons/square";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import FileIcon from "lucide-solid/icons/file";
 import XIcon from "lucide-solid/icons/x";
+import CopyIcon from "lucide-solid/icons/copy";
+import RefreshIcon from "lucide-solid/icons/refresh-cw";
 import * as pdfjs from "pdfjs-dist";
 import pdfjsWorkerURL from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { createEffect, createMemo, createSignal, For, onMount, Show } from "solid-js";
@@ -147,7 +149,12 @@ function renderLaTeX(codeblock: HTMLElement) {
   }
 }
 
-function SubMessageView(props: { subMessage: SubChatMessage; messageState: ChatMessageState; latest: boolean }) {
+function SubMessageView(props: {
+  subMessage: SubChatMessage;
+  messageState: ChatMessageState;
+  latest: boolean;
+  regenerateMessage: () => void;
+}) {
   if (props.subMessage.kind === "attachment") {
     return <ChatMessageAttachmentView attachment={props.subMessage.attachment} />;
   }
@@ -263,11 +270,12 @@ function SubMessageView(props: { subMessage: SubChatMessage; messageState: ChatM
 
   newElementObserver.observe(messageContainer, { childList: true, subtree: true });
 
+  const textSub = props.subMessage as TextSubChatMessage;
   const timeEnd: number = props.subMessage.timeEnd() || Date.now();
   const [thinkingExpanded, setThinkingExpanded] = createSignal(false);
   const [thinkingTime, setThinkingTime] = createSignal(timeEnd - props.subMessage.timeStart());
 
-  const textSub = props.subMessage as TextSubChatMessage;
+  const isMessageEmpty = createMemo(() => textSub.content().length === 0);
 
   if (props.subMessage.thinking) {
     const updateTime = 10;
@@ -333,7 +341,31 @@ function SubMessageView(props: { subMessage: SubChatMessage; messageState: ChatM
     );
   }
 
-  return messageContainer;
+  function copyToClipboard() {
+    navigator.clipboard.writeText(textSub.content());
+  }
+
+  return (
+    <Show when={!isMessageEmpty()}>
+      <div class="flex flex-col gap-2">
+        {messageContainer}
+        <div
+          class={cn(
+            "flex transition-[opacity]",
+            textSub.finished() && "opacity-100",
+            !textSub.finished() && "pointer-events-none opacity-0",
+          )}
+        >
+          <Button variant="ghost" class="p-2" onClick={copyToClipboard}>
+            <CopyIcon class="size-4" />
+          </Button>
+          <Button variant="ghost" class="p-2" onClick={() => props.regenerateMessage()}>
+            <RefreshIcon class="size-4" />
+          </Button>
+        </div>
+      </div>
+    </Show>
+  );
 }
 
 function UserFileView(props: { file: UserFile }) {
@@ -374,7 +406,7 @@ function UserFileView(props: { file: UserFile }) {
   );
 }
 
-function ChatMessageView(props: { message: DisplayChatMessage }) {
+function ChatMessageView(props: { message: DisplayChatMessage; regenerateMessage: () => void }) {
   if (props.message.role === "user") {
     return (
       <div class="flex flex-col items-end gap-2">
@@ -399,6 +431,7 @@ function ChatMessageView(props: { message: DisplayChatMessage }) {
               subMessage={subMessage}
               messageState={(props.message as AssistantChatMessage).state()}
               latest={index() === subMessageCount() - 1}
+              regenerateMessage={() => props.regenerateMessage()}
             />
           )}
         </For>
@@ -555,8 +588,6 @@ export function ChatView(props: ChatViewProps) {
   async function sendMessage(text: string) {
     const toolChecks = toolSupport();
     const result = props.chat.sendMessage(
-      props.chat.currentModel(),
-
       text,
       userFileUploads(),
 
@@ -652,6 +683,14 @@ export function ChatView(props: ChatViewProps) {
     }
   }
 
+  function regenerateMessage(id: string) {
+    const toolChecks = toolSupport();
+    props.chat.regenerateMessage(
+      id,
+      modelTools.filter((tool) => toolChecks[tool.name]),
+    );
+  }
+
   const chatHistoryEmpty = createMemo(() => props.chat.nativeMessages().length === 0);
 
   return (
@@ -670,7 +709,11 @@ export function ChatView(props: ChatViewProps) {
           <div class="flex-1 overflow-y-auto" onWheel={scrollingContainerScroll}>
             <div class="mx-auto h-full max-h-full w-full max-w-[800px]">
               <div class="flex flex-col gap-4 overflow-x-hidden pb-32" ref={messagesContainer}>
-                <For each={props.chat.displayMessages()}>{(message) => <ChatMessageView message={message} />}</For>
+                <For each={props.chat.displayMessages()}>
+                  {(message) => (
+                    <ChatMessageView message={message} regenerateMessage={() => regenerateMessage(message.id)} />
+                  )}
+                </For>
               </div>
             </div>
           </div>

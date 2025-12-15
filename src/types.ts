@@ -14,6 +14,7 @@ export interface PromptTemplate {
 export type ChatMessageState = "loading" | "typing" | "finished" | "toolcall" | "thinking";
 
 export interface AssistantChatMessage {
+  id: string;
   role: "assistant";
 
   state: Accessor<ChatMessageState>;
@@ -45,6 +46,7 @@ export interface UserDocumentFile {
 export type UserFile = UserImageFile | UserDocumentFile;
 
 export interface UserChatMessage {
+  id: string;
   role: "user";
   content: string;
   files: UserFile[];
@@ -93,6 +95,7 @@ export type SubChatMessage =
   | ErrorSubChatMessage;
 
 export interface NativeChatMessage {
+  id: string;
   role: string;
   content: string;
   thinking?: string;
@@ -158,7 +161,6 @@ export interface ModelTool {
 export interface ToolContext {
   model: ListedModel;
   signal: AbortSignal;
-  lastMessage: string;
   documents: RAGDocument[];
   freeModel(model: ListedModel): Promise<void>;
 }

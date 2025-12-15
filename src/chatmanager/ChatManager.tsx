@@ -74,12 +74,13 @@ export function createChatMessage(
   content?: string,
   files?: UserFile[],
 ): UserChatMessage | AssistantChatMessage {
-  if (role === "user") return { role, content: content!, files: files! };
+  if (role === "user") return { id: uuidv4(), role, content: content!, files: files! };
 
   const [state, setState] = createSignal<ChatMessageState>("loading");
   const [subMessages, setSubMessages] = createSignal<SubChatMessage[]>([]);
 
   return {
+    id: uuidv4(),
     role: role as "assistant",
 
     state,
@@ -245,8 +246,15 @@ export class ChatManagerChat {
     this.setNativeMessages((messages) => [...messages, message]);
   }
 
-  changeSystemMessage(message: NativeChatMessage) {
-    this.setNativeMessages([message, ...this.nativeMessages().slice(1)]);
+  changeSystemMessage(role: string, content: string) {
+    const currentSystemMessage = this.nativeMessages().find((message) => message.id === "SYSTEM");
+    const message = { id: "SYSTEM", role, content };
+
+    if (!currentSystemMessage) {
+      this.setNativeMessages([message, ...this.nativeMessages()]);
+    } else {
+      this.setNativeMessages([message, ...this.nativeMessages().filter((message) => message.id !== "SYSTEM")]);
+    }
   }
 
   addDisplayMessage(message: DisplayChatMessage) {
@@ -267,7 +275,6 @@ export class ChatManagerChat {
     model: ListedModel,
     assistantMessage: AssistantChatMessage,
     supportedTools: ModelTool[],
-    lastMessage: string,
     toolName: string,
     toolParams: Record<string, string>,
   ): Promise<ToolOutput> {
@@ -301,7 +308,6 @@ export class ChatManagerChat {
     const toolContext: ToolContext = {
       model,
       documents: this.ragDocuments,
-      lastMessage: lastMessage,
       signal: this.toolController.signal,
 
       freeModel: async (model) => {
@@ -328,7 +334,10 @@ export class ChatManagerChat {
     return result;
   }
 
-  private async processDocumentUploads(fileUploads: UserFile[]) {
+  private async processDocumentUploads(
+    fileUploads: UserFile[],
+    addNativeMessage: (message: NativeChatMessage) => void,
+  ) {
     // const pdfRenderCanvas = document.createElement("canvas");
     const partialDocuments: { file: UserDocumentFile; chunks: string[] }[] = [];
 
@@ -366,7 +375,8 @@ export class ChatManagerChat {
 
       doc.file.setProgress(1);
 
-      this.addNativeMessage({
+      addNativeMessage({
+        id: uuidv4(),
         role: "user",
         content: `[user uploaded document '${doc.file.fileName}', document id ${this.ragDocuments.length}]`,
       });
@@ -386,76 +396,55 @@ export class ChatManagerChat {
     serializeChatList.deleteChat(this.id);
   }
 
-  public sendMessage(
-    selectedModel: ListedModel,
-    userMessage: string,
-    fileUploads: UserFile[],
+  async generateResponse(
     tools: ModelTool[],
-    currentTag: InputTag | null,
-  ): SendMessageResult {
-    if (this.modelState() !== "idle" || userMessage === "") return { ok: false };
-    return { ok: true, promise: this.sendMessageImpl(selectedModel, userMessage, fileUploads, tools, currentTag) };
-  }
-
-  public async abort() {
-    this.providerController?.abort();
-    this.toolController?.abort();
-  }
-
-  private async sendMessageImpl(
-    selectedModel: ListedModel,
-    userMessage: string,
-    fileUploads: UserFile[],
-    tools: ModelTool[],
-    currentTag: InputTag | null,
+    currentTag?: InputTag,
+    fileUploads?: UserFile[],
+    cutOffIndex?: number,
   ): Promise<void> {
-    const assistantMessage = createChatMessage("assistant");
-    const userChatMessage = createChatMessage("user", userMessage, fileUploads);
-
+    const selectedModel = this.currentModel();
     const metadata = this.selectedModelMetadata();
     if (!metadata) throw new Error("metadata not loaded");
+
+    const self = this;
+    const nativeCutOffStart = typeof cutOffIndex === "number" ? cutOffIndex + 1 : this.nativeMessages().length;
+    const nativeAddedMessages: NativeChatMessage[] = [];
+
+    function addNativeMessage(message: NativeChatMessage) {
+      const before = self.nativeMessages().slice(0, nativeCutOffStart + 1);
+      const after = self.nativeMessages().slice(nativeCutOffStart + nativeAddedMessages.length + 1);
+
+      nativeAddedMessages.push(message);
+      self.setNativeMessages([...before, ...nativeAddedMessages, ...after]);
+    }
+
+    function addDisplayMessage(message: DisplayChatMessage) {
+      const beforeId = self.nativeMessages()[nativeCutOffStart]?.id;
+
+      if (beforeId) {
+        const beforeIndex = self.displayMessages().findIndex((message) => message.id === beforeId);
+        const before = self.displayMessages().slice(0, beforeIndex + 1);
+        const after = self.displayMessages().slice(beforeIndex + 1);
+
+        self.setDisplayMessages([...before, message, ...after]);
+      } else {
+        self.addDisplayMessage(message);
+      }
+    }
 
     const { capabilities } = metadata;
     const promptTools = capabilities.tools ? undefined : tools;
     const modelSystemRole = "system";
 
-    if (this.nativeMessages().length === 0) {
-      this.addNativeMessage({
-        role: modelSystemRole,
-        content: buildSystemPrompt({ tools: promptTools }),
-      });
-    }
+    this.changeSystemMessage(modelSystemRole, buildSystemPrompt({ tools: promptTools }));
 
-    this.changeSystemMessage({ role: modelSystemRole, content: buildSystemPrompt({ tools: promptTools }) });
-
-    let userImages: string[] = [];
-
-    for (const file of fileUploads) {
-      if (file.kind === "image") {
-        userImages.push(file.encoded);
-      }
-    }
-
-    let taggedUserMessage = "";
-
-    if (currentTag && currentTag.prompt) {
-      taggedUserMessage += currentTag.prompt + "\n\n";
-    }
-
-    taggedUserMessage += userMessage;
-
-    this.addNativeMessage({
-      role: "user",
-      content: taggedUserMessage,
-      images: userImages.length > 0 ? userImages : undefined,
-    });
-
+    const assistantMessage = createChatMessage("assistant");
     this.setModelState("loading");
+    addDisplayMessage(assistantMessage);
 
-    this.addDisplayMessage(userChatMessage);
-    this.addDisplayMessage(assistantMessage);
-
-    await this.processDocumentUploads(fileUploads);
+    if (fileUploads) {
+      await this.processDocumentUploads(fileUploads, addNativeMessage);
+    }
 
     let newTurn = false;
 
@@ -464,7 +453,6 @@ export class ChatManagerChat {
     let useThinking: boolean | "low" | "medium" | "high" | undefined = undefined;
 
     if (capabilities.thinking) {
-      console.log("model can think.", capabilities);
       useThinking = true;
 
       // TODO: improve gpt-oss detection, probably family field in metadata?
@@ -486,8 +474,6 @@ export class ChatManagerChat {
       const controller = new AbortController();
       this.providerController = controller;
 
-      const self = this;
-
       let isToolCall = false;
 
       let textContent = "";
@@ -497,7 +483,8 @@ export class ChatManagerChat {
 
       async function streamChunk(chunk: StreamChunk) {
         if (chunk.type === "toolCalls") {
-          self.addNativeMessage({
+          addNativeMessage({
+            id: assistantMessage.id,
             role: "assistant",
             content: textContent,
             thinking: thinkingContent,
@@ -514,12 +501,12 @@ export class ChatManagerChat {
               selectedModel,
               assistantMessage,
               tools,
-              userMessage,
               tool.function.name,
               tool.function.arguments,
             );
 
-            self.addNativeMessage({
+            addNativeMessage({
+              id: assistantMessage.id,
               role: "tool",
               tool_name: tool.function.name,
               content: JSON.stringify(result.data, null, 2),
@@ -594,7 +581,7 @@ export class ChatManagerChat {
       try {
         await provider.generate(
           selectedModel.identifier,
-          this.nativeMessages(),
+          this.nativeMessages().slice(0, nativeCutOffStart + nativeAddedMessages.length + 1),
           !capabilities.tools ? null : tools,
           streamChunk,
           this.providerController.signal,
@@ -623,7 +610,12 @@ export class ChatManagerChat {
           if (textContent.endsWith("```xml")) textContent = textContent.substring(0, textContent.length - 6);
 
           currentTextSubmessage?.replace(textContent);
-          this.addNativeMessage({ role: "assistant", content: textContent, thinking: thinkingContent });
+          addNativeMessage({
+            id: assistantMessage.id,
+            role: "assistant",
+            content: textContent,
+            thinking: thinkingContent,
+          });
 
           const parsed = new DOMParser().parseFromString(toolContent, "text/xml");
           const toolName = parsed.querySelector("name")?.textContent;
@@ -644,17 +636,16 @@ export class ChatManagerChat {
             toolParams[parameterName] = parameter.textContent;
           }
 
-          const result = await this.runModelTool(
-            selectedModel,
-            assistantMessage,
-            tools,
-            userMessage,
-            toolName,
-            toolParams,
-          );
+          const result = await this.runModelTool(selectedModel, assistantMessage, tools, toolName, toolParams);
 
-          this.addNativeMessage({ role: "assistant", content: `\`\`\`xml\n${toolContent}\n\`\`\`` });
-          this.addNativeMessage({
+          addNativeMessage({
+            id: assistantMessage.id,
+            role: "assistant",
+            content: `\`\`\`xml\n${toolContent}\n\`\`\``,
+          });
+
+          addNativeMessage({
+            id: assistantMessage.id,
             role: "user",
             content: `The output of tool '${toolName}'. The user cannot see this message.
 
@@ -674,7 +665,12 @@ ${JSON.stringify(result.data, null, 2)}
         }
       }
 
-      this.addNativeMessage({ role: "assistant", content: textContent, thinking: thinkingContent });
+      addNativeMessage({
+        id: assistantMessage.id,
+        role: "assistant",
+        content: textContent,
+        thinking: thinkingContent,
+      });
     } while (newTurn);
 
     if (errored && !(error instanceof DOMException && error.name === "AbortError")) {
@@ -685,6 +681,83 @@ ${JSON.stringify(result.data, null, 2)}
     this.setModelState("idle");
     this.toolController = null;
     this.providerController = null;
+  }
+
+  public sendMessage(
+    userMessage: string,
+    fileUploads: UserFile[],
+    tools: ModelTool[],
+    currentTag: InputTag | null,
+  ): SendMessageResult {
+    if (this.modelState() !== "idle" || userMessage === "") return { ok: false };
+    return {
+      ok: true,
+      promise: this.sendMessageImpl(userMessage, fileUploads, tools, currentTag),
+    };
+  }
+
+  public async abort() {
+    this.providerController?.abort();
+    this.toolController?.abort();
+  }
+
+  public async regenerateMessage(id: string, tools: ModelTool[], inputTag?: InputTag): Promise<void> {
+    const nativeMessages = this.nativeMessages();
+    const messageIndex = nativeMessages.findIndex((message) => message.id === id);
+
+    if (messageIndex >= 0) {
+      let lastUserIndex = -1;
+
+      for (let i = messageIndex; i >= 0; i--) {
+        if (nativeMessages[i].role === "user") {
+          lastUserIndex = i;
+          break;
+        }
+      }
+
+      if (lastUserIndex >= 0) {
+        this.setDisplayMessages(this.displayMessages().filter((message) => message.id !== id));
+        this.setNativeMessages(nativeMessages.filter((message) => message.id !== id));
+
+        await this.generateResponse(tools, inputTag, undefined, lastUserIndex - 1);
+      }
+    }
+  }
+
+  private async sendMessageImpl(
+    userMessage: string,
+    fileUploads: UserFile[],
+    tools: ModelTool[],
+    currentTag: InputTag | null,
+  ): Promise<void> {
+    const userChatMessage = createChatMessage("user", userMessage, fileUploads);
+
+    let userImages: string[] = [];
+
+    for (const file of fileUploads) {
+      if (file.kind === "image") {
+        userImages.push(file.encoded);
+      }
+    }
+
+    let taggedUserMessage = "";
+
+    if (currentTag && currentTag.prompt) {
+      taggedUserMessage += currentTag.prompt + "\n\n";
+    }
+
+    taggedUserMessage += userMessage;
+
+    this.addNativeMessage({
+      id: userChatMessage.id,
+      role: "user",
+      content: taggedUserMessage,
+      images: userImages.length > 0 ? userImages : undefined,
+    });
+
+    this.addDisplayMessage(userChatMessage);
+
+    await this.generateResponse(tools, undefined, fileUploads);
   }
 
   private async loadChat(): Promise<void> {
@@ -740,14 +813,13 @@ class ChatManagerNewChat extends ChatManagerChat {
   }
 
   override sendMessage(
-    selectedModel: ListedModel,
     userMessage: string,
     fileUploads: UserFile[],
     tools: ModelTool[],
     currentTag: InputTag | null,
   ): SendMessageResult {
     if (!this.created) this.createNew(userMessage);
-    return super.sendMessage(selectedModel, userMessage, fileUploads, tools, currentTag);
+    return super.sendMessage(userMessage, fileUploads, tools, currentTag);
   }
 }
 

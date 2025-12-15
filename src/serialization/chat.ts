@@ -3,14 +3,12 @@ import { database } from "@/indexeddb";
 import type { DisplayChatMessage, NativeChatMessage, RAGDocument, SubChatMessageData, UserFile } from "@/types";
 import { StringPool } from "@/util/stringpool";
 import { createDatabase, type DBSerializedData } from "@/vectordb";
-import ollama from "ollama/browser";
-import { createSignal, runWithOwner } from "solid-js";
 
 type SavedUserFile = { kind: "image" | "document"; fileName: string; data: string };
 
 type SavedChatMessage =
-  | { role: "user"; content: number; files: SavedUserFile[] }
-  | { role: "assistant"; messages: SubChatMessageData[] };
+  | { id: string; role: "user"; content: number; files: SavedUserFile[] }
+  | { id: string; role: "assistant"; messages: SubChatMessageData[] };
 
 type ExcludeKeys<T, U extends keyof T> = { [K in Exclude<keyof T, U>]: T[K] };
 
@@ -82,9 +80,13 @@ export async function loadChat(chatId: string): Promise<
         }
       }
 
-      messages.push(createChatMessage("user", chatData.stringPool[message.content], userFiles));
+      const userMessage = createChatMessage("user", chatData.stringPool[message.content], userFiles);
+      userMessage.id = message.id;
+
+      messages.push(userMessage);
     } else if (message.role === "assistant") {
       const assistantMessage = createChatMessage("assistant");
+      assistantMessage.id = message.id;
 
       for (const subData of message.messages) {
         if (subData.kind === "text") {
@@ -177,6 +179,7 @@ export async function saveChat(
       }
 
       saveChatMessages.push({
+        id: message.id,
         role: "user",
         files: saveFiles,
         content: stringPool.add(message.content),
@@ -213,7 +216,7 @@ export async function saveChat(
         }
       }
 
-      saveChatMessages.push({ role: "assistant", messages: sub });
+      saveChatMessages.push({ id: message.id, role: "assistant", messages: sub });
     }
   }
 
