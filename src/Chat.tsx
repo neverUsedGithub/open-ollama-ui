@@ -135,8 +135,14 @@ function formatErrorData(error: unknown) {
 }
 
 function highlightCode(codeblock: HTMLElement) {
-  const result = hljs.highlight(codeblock.textContent, { language: codeblock.className });
-  (codeblock.previousSibling! as HTMLElement).getElementsByTagName("code")[0].innerHTML = result.value;
+  const target = (codeblock.previousSibling! as HTMLElement).getElementsByTagName("code")[0];
+
+  if (codeblock.className && availableHighlightingLanguages.includes(codeblock.className)) {
+    const result = hljs.highlight(codeblock.textContent, { language: codeblock.className });
+    target.innerHTML = result.value;
+  } else {
+    target.textContent = codeblock.textContent;
+  }
 }
 
 function renderLaTeX(codeblock: HTMLElement) {
@@ -245,13 +251,13 @@ function SubMessageView(props: {
               elem.tagName === "CODE" &&
               elem.parentElement &&
               elem.parentElement.tagName === "PRE" &&
-              availableHighlightingLanguages.includes(elem.className) &&
               !elem.dataset.highlighted
             ) {
+              const languageName = elem.className ? elem.className : "plaintext";
               const inserted = (
                 <div>
                   <div class="bg-background-higher flex items-center justify-between rounded-t-xl px-3 py-2 text-sm capitalize">
-                    <span>{elem.className}</span>
+                    <span>{languageName}</span>
                     <div class="flex gap-2">
                       <ChangingButton
                         icon
