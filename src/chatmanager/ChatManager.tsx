@@ -704,6 +704,8 @@ ${JSON.stringify(result.data, null, 2)}
   }
 
   public async regenerateMessage(id: string, tools: ModelTool[], inputTag?: InputTag): Promise<void> {
+    if (this.modelState() !== "idle") return;
+
     const nativeMessages = this.nativeMessages();
     const messageIndex = nativeMessages.findIndex((message) => message.id === id);
 
