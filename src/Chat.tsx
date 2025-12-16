@@ -223,9 +223,7 @@ function SubMessageView(props: {
 
   const codeBlockObserver = new MutationObserver((mutationList) => {
     for (const mutation of mutationList) {
-      const targetElement = mutation.target as HTMLElement;
-      if (!targetElement.className) return;
-      highlightCode(targetElement);
+      highlightCode(mutation.target as HTMLElement);
     }
   });
 
