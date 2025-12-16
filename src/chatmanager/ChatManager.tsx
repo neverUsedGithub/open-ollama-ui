@@ -455,8 +455,10 @@ export class ChatManagerChat {
     if (capabilities.thinking) {
       useThinking = true;
 
-      // TODO: improve gpt-oss detection, probably family field in metadata?
-      if (selectedModel.identifier.includes("gpt-oss")) {
+      if (
+        metadata.details.family &&
+        (metadata.details.family.includes("gpt-oss") || metadata.details.family.includes("gptoss"))
+      ) {
         useThinking = "medium";
 
         if (currentTag && currentTag.id === "think") {
