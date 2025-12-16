@@ -28,6 +28,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import FileIcon from "lucide-solid/icons/file";
 import XIcon from "lucide-solid/icons/x";
 import CopyIcon from "lucide-solid/icons/copy";
+import DownloadIcon from "lucide-solid/icons/download";
 import RefreshIcon from "lucide-solid/icons/refresh-cw";
 import * as pdfjs from "pdfjs-dist";
 import pdfjsWorkerURL from "pdfjs-dist/build/pdf.worker.mjs?url";
@@ -41,6 +42,7 @@ import { modelTools } from "./tools";
 import "./Chat.css";
 import { Button } from "./components/Button";
 import { ChangingButton } from "./components/ChangingButton";
+import { downloadCodeBlock } from "./util/downloadFile";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerURL;
 
@@ -251,6 +253,23 @@ function SubMessageView(props: {
                   <div class="bg-background-higher flex items-center justify-between rounded-t-xl px-3 py-2 text-sm capitalize">
                     <span>{elem.className}</span>
                     <div class="flex gap-2">
+                      <ChangingButton
+                        icon
+                        variant="ghost"
+                        class="hover:bg-background-highest size-8"
+                        defaultIcon={<DownloadIcon />}
+                        activeIcon={<CheckIcon />}
+                        onClick={() => {
+                          const date = new Date();
+
+                          downloadCodeBlock(
+                            elem.className,
+                            `ui-download-${(date.getMonth() + 1).toString().padStart(2, "0")}${date.getDate().toString().padStart(2, "0")}-${date.getHours().toString().padStart(2, "0")}${date.getMinutes().toString().padStart(2, "0")}`,
+                            elem.textContent,
+                          );
+                        }}
+                      ></ChangingButton>
+
                       <ChangingButton
                         icon
                         variant="ghost"
