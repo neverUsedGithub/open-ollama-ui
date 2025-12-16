@@ -8,7 +8,7 @@ Ollama interface without the hassle of downloading locally, while being open-sou
 
 ## Set up
 
-You need to create a new environmental variable named `OLLAMA_ORIGINS` with the value `://neverusedgithub.github.io` (if the variable already exists separate the existing origins and the new origin with a comma).
+You need to create a new environmental variable named `OLLAMA_ORIGINS` with the value `*://neverusedgithub.github.io` (if the variable already exists separate the existing origins and the new origin with a comma, for example `*://some-other-site.com,*://neverusedgithub.github.io`).
 
 ## Usage
 
