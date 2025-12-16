@@ -1,8 +1,6 @@
-
-
 .markdown-container {
   @apply leading-7;
-  
+
   ul {
     @apply pl-5;
 
@@ -53,14 +51,14 @@
   }
 
   code {
-    @apply bg-background-default text-sm font-mono;
+    @apply bg-background-default font-mono text-sm;
   }
 
   pre:has(> code) {
-    @apply bg-background-default my-2 rounded-xl px-4 py-3 whitespace-pre-wrap break-all;
+    @apply my-2 break-all whitespace-pre-wrap;
 
     code {
-      @apply bg-transparent;
+      @apply bg-background-default block rounded-b-xl px-3 py-3;
     }
   }
 
@@ -109,11 +107,11 @@
     @apply my-2;
   }
 
-  >:first-child {
+  > :first-child {
     @apply mt-0;
   }
 
-  >:last-child {
+  > :last-child {
     @apply mb-0;
   }
 }

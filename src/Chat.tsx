@@ -40,6 +40,7 @@ import { modelTools } from "./tools";
 
 import "./Chat.css";
 import { Button } from "./components/Button";
+import { ChangingButton } from "./components/ChangingButton";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerURL;
 
@@ -133,7 +134,7 @@ function formatErrorData(error: unknown) {
 
 function highlightCode(codeblock: HTMLElement) {
   const result = hljs.highlight(codeblock.textContent, { language: codeblock.className });
-  (codeblock.previousSibling! as HTMLElement).innerHTML = result.value;
+  (codeblock.previousSibling! as HTMLElement).getElementsByTagName("code")[0].innerHTML = result.value;
 }
 
 function renderLaTeX(codeblock: HTMLElement) {
@@ -245,9 +246,26 @@ function SubMessageView(props: {
               availableHighlightingLanguages.includes(elem.className) &&
               !elem.dataset.highlighted
             ) {
-              const clone = elem.cloneNode() as HTMLElement;
-              clone.dataset.highlighted = "true";
-              elem.parentElement.insertBefore(clone, elem);
+              const inserted = (
+                <div>
+                  <div class="bg-background-higher flex items-center justify-between rounded-t-xl px-3 py-2 text-sm capitalize">
+                    <span>{elem.className}</span>
+                    <div class="flex gap-2">
+                      <ChangingButton
+                        icon
+                        variant="ghost"
+                        class="hover:bg-background-highest size-8"
+                        defaultIcon={<CopyIcon />}
+                        activeIcon={<CheckIcon />}
+                        onClick={() => navigator.clipboard.writeText(elem.textContent)}
+                      ></ChangingButton>
+                    </div>
+                  </div>
+                  <code>{elem.cloneNode()}</code>
+                </div>
+              ) as HTMLElement;
+              inserted.dataset.highlighted = "true";
+              elem.parentElement.insertBefore(inserted, elem);
               elem.style.display = "none";
 
               highlightCode(elem);
@@ -356,12 +374,21 @@ function SubMessageView(props: {
             !textSub.finished() && "pointer-events-none opacity-0",
           )}
         >
-          <Button variant="ghost" class="p-2" onClick={copyToClipboard}>
-            <CopyIcon class="size-4" />
-          </Button>
-          <Button variant="ghost" class="p-2" onClick={() => props.regenerateMessage()}>
-            <RefreshIcon class="size-4" />
-          </Button>
+          <ChangingButton
+            variant="ghost"
+            class="size-8 p-2"
+            onClick={copyToClipboard}
+            defaultIcon={<CopyIcon />}
+            activeIcon={<CheckIcon />}
+          ></ChangingButton>
+
+          <ChangingButton
+            variant="ghost"
+            class="size-8 p-2"
+            onClick={() => props.regenerateMessage()}
+            defaultIcon={<RefreshIcon />}
+            activeIcon={<CheckIcon />}
+          ></ChangingButton>
         </div>
       </div>
     </Show>
