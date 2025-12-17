@@ -229,8 +229,7 @@ function SubMessageView(props: {
 
   const latexObserver = new MutationObserver((mutationList) => {
     for (const mutation of mutationList) {
-      const targetElement = mutation.target as HTMLElement;
-      renderLaTeX(targetElement);
+      renderLaTeX(mutation.target as HTMLElement);
     }
   });
 
