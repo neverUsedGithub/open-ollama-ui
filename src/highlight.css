@@ -79,3 +79,7 @@
 .hljs-type {
   color: var(--highlight-type);
 }
+
+.hljs-subst {
+  color: var(--color-foreground);
+}
