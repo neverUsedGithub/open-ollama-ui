@@ -11,6 +11,7 @@ import GlobeIcon from "lucide-solid/icons/globe";
 import ImagePlusIcon from "lucide-solid/icons/image-plus";
 import ollama from "ollama/browser";
 import TurndownService from "turndown";
+import TurndownPluginGFM from "turndown-plugin-gfm";
 
 async function summarizeTextAbortable(ctx: ToolContext, document: string, query: string): Promise<string> {
   const summaryModel = "qwen3:4b-instruct-2507-q8_0";
@@ -304,6 +305,8 @@ run_snippet(${JSON.stringify(properties.code)})`,
           emDelimiter: "_",
           strongDelimiter: "**",
         });
+        
+        turndown.use(TurndownPluginGFM.gfm);
 
         turndown.remove(["script", "style"]);
 
@@ -331,7 +334,11 @@ run_snippet(${JSON.stringify(properties.code)})`,
           dataDOM.body;
 
         const output = turndown.turndown(contentEl);
-        const summary = await summarizeTextAbortable(ctx, output, ctx.lastMessage);
+        const summary = await summarizeTextAbortable(
+          ctx,
+          output,
+          "Summarize this webpage. Extract key data and information.",
+        );
 
         const furtherLinks = links.slice(0, 5);
 
