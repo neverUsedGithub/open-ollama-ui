@@ -35,7 +35,7 @@ import pdfjsWorkerURL from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { createEffect, createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as streamingMarkdown from "streaming-markdown";
-import type { ChatManager, ChatManagerChat } from "./chatmanager/ChatManager";
+import type { ChatManager, ChatManagerChat } from "./chatManager/ChatManager";
 import { inputTags } from "./inputtags";
 import { modelTools } from "./tools";
 
@@ -536,6 +536,7 @@ export function ChatView(props: ChatViewProps) {
       value={inputText()}
       onInput={(ev) => onTextareaInput(ev.target.value)}
       onKeyPress={handleKeyPress}
+      onPaste={handlePaste}
       rows="1"
     ></textarea>
   ) as HTMLTextAreaElement;
@@ -632,6 +633,27 @@ export function ChatView(props: ChatViewProps) {
 
     ev.preventDefault();
     sendMessage(inputText());
+  }
+
+  async function handlePaste(ev: ClipboardEvent) {
+    if (!ev.clipboardData) return;
+
+    const newFiles: UserFile[] = [];
+
+    for (const item of ev.clipboardData.items) {
+      if (item.kind === "file" && item.type.includes("image")) {
+        const bytes = await item.getAsFile()!.bytes();
+
+        newFiles.push({
+          kind: "image",
+          fileName: "Pasted image",
+          content: bytes,
+          encoded: bytes.toBase64(),
+        });
+      }
+    }
+
+    setUserFileUploads((uploads) => [...uploads, ...newFiles]);
   }
 
   async function sendMessage(text: string) {
