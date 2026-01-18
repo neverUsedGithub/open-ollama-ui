@@ -490,7 +490,8 @@ run_snippet(${JSON.stringify(properties.code)})`,
     icon: LanguagesIcon,
 
     summary: "Translating a piece of text.",
-    description: "Translate a string of text from one language, to another. Prefer using this tool for important or complicated text snippets, instead of relying on your own translations.",
+    description:
+      "Translate a string of text from one language, to another. Prefer using this tool for important or complicated text snippets, instead of relying on your own translations.",
 
     parameters: {
       type: "object",
@@ -517,6 +518,8 @@ run_snippet(${JSON.stringify(properties.code)})`,
       let sourceLanguage = props.source_language_code;
 
       if (typeof sourceLanguage !== "string" || !(sourceLanguage in languageMapping)) {
+        sourceLanguage = "";
+
         await ollama!.generate(
           "qwen3:4b-instruct",
           [
