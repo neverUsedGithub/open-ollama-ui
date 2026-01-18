@@ -1,14 +1,17 @@
 import * as embedding from "@/embedding";
 import * as imageGen from "@/imagegen";
+import { ProviderManager } from "@/providers";
 import { BraveSearchProvider } from "@/search/providers/brave";
 import type { ModelTool, ToolContext } from "@/types";
 import { extensionApi, isExtensionInstalled } from "@/util/extension";
+import { languageMapping } from "@/util/languages";
 import * as vectordb from "@/vectordb";
 import BinaryIcon from "lucide-solid/icons/binary";
 import BookOpenText from "lucide-solid/icons/book-open-text";
 import CalculatorIcon from "lucide-solid/icons/calculator";
 import GlobeIcon from "lucide-solid/icons/globe";
 import ImagePlusIcon from "lucide-solid/icons/image-plus";
+import LanguagesIcon from "lucide-solid/icons/languages";
 import ollama from "ollama/browser";
 import TurndownService from "turndown";
 import { gfm as TurndownPluginGFM } from "turndown-plugin-gfm";
@@ -479,6 +482,79 @@ run_snippet(${JSON.stringify(properties.code)})`,
 
       return {
         data: summary,
+      };
+    },
+  },
+  {
+    name: "translate",
+    icon: LanguagesIcon,
+
+    summary: "Translating a piece of text.",
+    description: "Translate a string of text from one language, to another. Prefer using this tool for important or complicated text snippets, instead of relying on your own translations.",
+
+    parameters: {
+      type: "object",
+      properties: {
+        source_language_code: {
+          type: "string",
+          description:
+            "The code of the source language (en, zh, etc...). If left empty, the source language will be guessed based on the text.",
+        },
+        target_language_code: {
+          type: "string",
+          description: "The code of the target language  (en, zh, etc...).",
+        },
+        text: {
+          type: "string",
+          description: "The text snippet to translate.",
+        },
+      },
+      required: ["target_language_code", "text"],
+    },
+
+    async execute(props: { source_language_code?: string; target_language_code: string; text: string }, context) {
+      const ollama = await ProviderManager.getInstance().getProvider("ollama");
+      let sourceLanguage = props.source_language_code;
+
+      if (typeof sourceLanguage !== "string" || !(sourceLanguage in languageMapping)) {
+        await ollama!.generate(
+          "qwen3:4b-instruct",
+          [
+            {
+              id: "1",
+              role: "system",
+              content: `You are a language model designed to guess the language, and more specifically the language code of a snippet of text.
+  You should only respond with the code of the language the text uses, do not include any commentary or explanation.
+  Below are a list of languages and language codes for reference:\n${JSON.stringify(languageMapping, null, 2)}`,
+            },
+            {
+              id: "2",
+              role: "user",
+              content: props.text,
+            },
+          ],
+          null,
+          async (chunk) => void (chunk.type === "text" && (sourceLanguage += chunk.content)),
+          context.signal,
+          false,
+        );
+      }
+
+      let output = "";
+
+      await ollama!.translate(
+        "translategemma:12b",
+        props.text,
+        sourceLanguage!,
+        props.target_language_code,
+        async (chunk) => void (chunk.type === "text" && (output += chunk.content)),
+        context.signal,
+      );
+
+      return {
+        data: {
+          translation: output,
+        },
       };
     },
   },

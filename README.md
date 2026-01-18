@@ -14,7 +14,7 @@ You need to create a new environmental variable named `OLLAMA_ORIGINS` with the 
 
 [Just open the Github Pages link!](https://neverusedgithub.github.io/open-ollama-ui/)
 
-## Note
+## Disclaimer
 
 Some of the app's features use some hardcoded models currently, these are (both from ollama):
 - qwen3:4b-instruct

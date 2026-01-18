@@ -397,7 +397,7 @@ function SubMessageView(props: {
       <div class="flex flex-col gap-2">
         <Show when={!textSub.showTranslation()}>{messageContainer}</Show>
         <Show when={textSub.showTranslation()}>
-          <div class="h-fit w-full overflow-hidden text-wrap break-words">{textSub.translation()}</div>
+          <div class="markdown-container h-fit w-full overflow-hidden text-wrap break-words">{textSub.translation()}</div>
         </Show>
         <div
           class={cn(
