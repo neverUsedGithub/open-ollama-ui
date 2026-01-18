@@ -7,6 +7,7 @@ import type {
   DisplayChatMessage,
   ModelState,
   PromptTemplate,
+  StreamChunk,
   SubChatMessage,
   SupportContext,
   TextSubChatMessage,
@@ -30,6 +31,8 @@ import XIcon from "lucide-solid/icons/x";
 import CopyIcon from "lucide-solid/icons/copy";
 import DownloadIcon from "lucide-solid/icons/download";
 import RefreshIcon from "lucide-solid/icons/refresh-cw";
+import LanguagesIcon from "lucide-solid/icons/languages";
+import LoaderIcon from "lucide-solid/icons/loader";
 import * as pdfjs from "pdfjs-dist";
 import pdfjsWorkerURL from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { createEffect, createMemo, createSignal, For, onMount, Show } from "solid-js";
@@ -43,6 +46,9 @@ import "./Chat.css";
 import { Button } from "./components/Button";
 import { ChangingButton } from "./components/ChangingButton";
 import { downloadCodeBlock } from "./util/downloadFile";
+import { PromiseButton } from "./components/PromiseButton";
+import { ProviderManager } from "./providers";
+import { languageMapping } from "./util/languages";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerURL;
 
@@ -163,6 +169,7 @@ function SubMessageView(props: {
   messageState: ChatMessageState;
   latest: boolean;
   regenerateMessage: () => void;
+  translateMessage: () => Promise<void>;
 }) {
   if (props.subMessage.kind === "attachment") {
     return <ChatMessageAttachmentView attachment={props.subMessage.attachment} />;
@@ -388,7 +395,10 @@ function SubMessageView(props: {
   return (
     <Show when={!isMessageEmpty()}>
       <div class="flex flex-col gap-2">
-        {messageContainer}
+        <Show when={!textSub.showTranslation()}>{messageContainer}</Show>
+        <Show when={textSub.showTranslation()}>
+          <div class="h-fit w-full overflow-hidden text-wrap break-words">{textSub.translation()}</div>
+        </Show>
         <div
           class={cn(
             "flex transition-[opacity]",
@@ -402,7 +412,7 @@ function SubMessageView(props: {
             onClick={copyToClipboard}
             defaultIcon={<CopyIcon />}
             activeIcon={<CheckIcon />}
-          ></ChangingButton>
+          />
 
           <ChangingButton
             variant="ghost"
@@ -410,7 +420,15 @@ function SubMessageView(props: {
             onClick={() => props.regenerateMessage()}
             defaultIcon={<RefreshIcon />}
             activeIcon={<CheckIcon />}
-          ></ChangingButton>
+          />
+
+          <PromiseButton
+            variant="ghost"
+            class="size-8 p-2"
+            onClick={() => props.translateMessage()}
+            defaultIcon={<LanguagesIcon />}
+            activeIcon={<LoaderIcon class="animate-spin" />}
+          />
         </div>
       </div>
     </Show>
@@ -467,6 +485,58 @@ function ChatMessageView(props: { message: DisplayChatMessage; regenerateMessage
     );
   }
 
+  async function translateSubMessage(subMessage: SubChatMessage): Promise<void> {
+    if (subMessage.kind !== "text") return;
+
+    if (subMessage.showTranslation()) {
+      subMessage.setShowTranslation(false);
+      return;
+    }
+
+    subMessage.setShowTranslation(true);
+
+    if (subMessage.translation().length > 0) {
+      return;
+    }
+
+    // TODO: Hardcoding this right now, fix later
+    const ollama = await ProviderManager.getInstance().getProvider("ollama");
+
+    let sourceLanguage = "";
+
+    await ollama!.generate(
+      "qwen3:4b-instruct",
+      [
+        {
+          id: "1",
+          role: "system",
+          content: `You are a language model designed to guess the language, and more specifically the language code of a snippet of text.
+You should only respond with the code of the language the text uses, do not include any commentary or explanation.
+Below are a list of languages and language codes for reference:\n${JSON.stringify(languageMapping, null, 2)}`,
+        },
+        {
+          id: "2",
+          role: "user",
+          content: subMessage.content(),
+        },
+      ],
+      null,
+      async (chunk) => void (chunk.type === "text" && (sourceLanguage += chunk.content)),
+      new AbortController().signal,
+      false,
+    );
+
+    await ollama!.translate(
+      "translategemma:12b",
+      subMessage.content(),
+      sourceLanguage,
+      navigator.languages.find((language) => language in languageMapping) ?? "en",
+      async (chunk) =>
+        void (chunk.type === "text" && subMessage.setTranslation((translation) => translation + chunk.content)),
+      new AbortController().signal,
+    );
+  }
+
   const subMessageCount = createMemo(() =>
     props.message.role === "assistant" ? props.message.subMessages().length : 0,
   );
@@ -481,6 +551,7 @@ function ChatMessageView(props: { message: DisplayChatMessage; regenerateMessage
               messageState={(props.message as AssistantChatMessage).state()}
               latest={index() === subMessageCount() - 1}
               regenerateMessage={() => props.regenerateMessage()}
+              translateMessage={() => translateSubMessage(subMessage)}
             />
           )}
         </For>

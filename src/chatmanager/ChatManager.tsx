@@ -42,6 +42,9 @@ function createSubMessage(data: SubChatMessageData): SubChatMessage {
   const [timeEnd, setTimeEnd] = createSignal(data.timeEnd);
   const [timeStart, setTimeStart] = createSignal(data.timeStart);
 
+  const [showTranslation, setShowTranslation] = createSignal(false);
+  const [translation, setTranslation] = createSignal("");
+
   function stream(data: string) {
     setContent((curr) => curr + data);
   }
@@ -56,6 +59,11 @@ function createSubMessage(data: SubChatMessageData): SubChatMessage {
     thinking: data.thinking,
 
     removeToolCall: noop,
+
+    translation,
+    setTranslation,
+    showTranslation,
+    setShowTranslation,
 
     finished,
     timeStart,

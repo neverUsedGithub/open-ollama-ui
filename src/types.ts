@@ -73,6 +73,11 @@ export type TextSubChatMessage = {
   replace(content: string): void;
   removeToolCall: () => void;
 
+  translation: Accessor<string>;
+  setTranslation: Setter<string>;
+  showTranslation: Accessor<boolean>;
+  setShowTranslation: Setter<boolean>;
+
   finished: Accessor<boolean>;
   timeStart: Accessor<number>;
   timeEnd: Accessor<number>;

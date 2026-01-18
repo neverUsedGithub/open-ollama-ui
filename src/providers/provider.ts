@@ -13,4 +13,12 @@ export abstract class ModelProvider {
     signal: AbortSignal,
     thinking: boolean | "low" | "medium" | "high" | undefined,
   ): Promise<void>;
+  abstract translate(
+    identifier: string,
+    input: string,
+    sourceLanguageCode: string,
+    targetLanguageCode: string,
+    stream: (chunk: StreamChunk) => Promise<void>,
+    signal: AbortSignal,
+  ): Promise<void>;
 }

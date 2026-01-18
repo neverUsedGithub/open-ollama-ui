@@ -1,6 +1,7 @@
-import type { ModelMetadata, ModelTool, NativeChatMessage, StreamChunk, ToolCall } from "@/types";
+import type { ModelMetadata, ModelTool, NativeChatMessage, StreamChunk } from "@/types";
 import { ModelProvider } from "./provider";
 import { Ollama } from "ollama/browser";
+import { languageMapping } from "@/util/languages";
 
 export class OllamaProvider extends ModelProvider {
   private ollama: Ollama;
@@ -73,6 +74,41 @@ export class OllamaProvider extends ModelProvider {
         await stream({ type: "thinking", content: part.message.thinking });
       }
     }
+  }
+
+  override async translate(
+    identifier: string,
+    input: string,
+    sourceCode: string,
+    targetCode: string,
+    stream: (chunk: StreamChunk) => Promise<void>,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const sourceName = languageMapping[sourceCode];
+    const targetName = languageMapping[targetCode];
+
+    if (!sourceName || !targetName) {
+      throw new Error(`Cannot find language name for '${sourceCode}' or '${targetCode}'.`);
+    }
+
+    await this.generate(
+      identifier,
+      [
+        {
+          id: "-",
+          role: "user",
+          content: `You are a professional ${sourceName} (${sourceCode}) to ${targetName} (${targetCode}) translator. Your goal is to accurately convey the meaning and nuances of the original ${sourceName} text while adhering to ${targetName} grammar, vocabulary, and cultural sensitivities.
+Produce only the ${targetName} translation, without any additional explanations or commentary. Please translate the following ${sourceName} text into ${targetName}:
+
+
+${input}`,
+        },
+      ],
+      null,
+      stream,
+      signal,
+      false,
+    );
   }
 
   override async freeModel(identifier: string): Promise<void> {

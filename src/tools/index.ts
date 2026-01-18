@@ -14,7 +14,8 @@ import TurndownService from "turndown";
 import { gfm as TurndownPluginGFM } from "turndown-plugin-gfm";
 
 async function summarizeTextAbortable(ctx: ToolContext, document: string, query: string): Promise<string> {
-  const summaryModel = "qwen3:4b-instruct-2507-q8_0";
+  // TODO: should move this to the new provider system too, also hardcoded....
+  const summaryModel = "qwen3:4b-instruct";
 
   // TODO: the initial loading time of the summarizer model CANNOT be aborted currently.
   const summaryResponse = await ollama.chat({
