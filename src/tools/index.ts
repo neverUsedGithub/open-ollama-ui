@@ -527,8 +527,8 @@ run_snippet(${JSON.stringify(properties.code)})`,
               id: "1",
               role: "system",
               content: `You are a language model designed to guess the language, and more specifically the language code of a snippet of text.
-  You should only respond with the code of the language the text uses, do not include any commentary or explanation.
-  Below are a list of languages and language codes for reference:\n${JSON.stringify(languageMapping, null, 2)}`,
+You should only respond with the code of the language the text uses, do not include any commentary or explanation.
+Below are a list of languages and language codes for reference:\n${JSON.stringify(languageMapping, null, 2)}`,
             },
             {
               id: "2",
